@@ -53,11 +53,13 @@ def test_export_events(RE, hw):
                 new_dims.append(dim)
         actual['start']['hints']['dimensions'] = [tuple(new_dims)]
 
+    descriptor_dict = {'primary': {'meta': [descriptor],
+                                   'seq_num': expected_dict['data']['seq_num'],
+                                   'time': expected_dict['time']}}
+
     expected.update({'start': start, 'stop': stop,
-                     'descriptors': {'primary':
-                         {'meta': [descriptor],
-                          'seq_num': expected_dict['data']['seq_num'],
-                          'time' : expected_dict['time']}}})
+                     'descriptors': descriptor_dict})
+
     actual['events'] = tifffile.imread(tiff)
     assert actual.keys() == expected.keys()
     assert actual['start'] == expected['start']
@@ -82,26 +84,24 @@ def test_export_bulk_event(RE, hw):
             collector.append((name, doc))
 
     RE.subscribe(collect)
-    RE(count([hw.det], 5))
+    RE(count([hw.direct_img], 5))
 
     with tempfile.NamedTemporaryFile(mode='w') as f:
         # We don't actually need f itself, just a filepath to template on.
-        meta, *csvs = export(collector, f.name)
-    csv, = csvs
+        meta, *tiffs = export(collector, f.name)
+    tiff, = tiffs
 
     docs = (doc for name, doc in collector)
     start, descriptor, *bulk_events, stop = docs
 
     expected = {}
-    expected_dict = {'data': {'det': [], 'seq_num': []}, 'time': []}
+    expected_dict = {'data': {'img': [], 'seq_num': []}, 'time': []}
     for event in events:
-        expected_dict['data']['det'].append(event['data']['det'])
+        expected_dict['data']['img'].append(event['data']['img'])
         expected_dict['data']['seq_num'].append(event['seq_num'])
         expected_dict['time'].append(event['time'])
 
-    expected['events'] = pandas.DataFrame(expected_dict['data'],
-                                          index=expected_dict['time'])
-    expected['events'].index.name = 'time'
+    expected['events'] = numpy.array(expected_dict['data']['img'])
 
     with open(meta) as f:
         actual = json.load(f)
@@ -115,14 +115,19 @@ def test_export_bulk_event(RE, hw):
                 new_dims.append(dim)
         actual['start']['hints']['dimensions'] = [tuple(new_dims)]
 
+    descriptor_dict = {'primary': {'meta': [descriptor],
+                                   'seq_num': expected_dict['data']['seq_num'],
+                                   'time': expected_dict['time']}}
+
     expected.update({'start': start, 'stop': stop,
-                     'descriptors': {'primary': [descriptor]}})
-    actual['events'] = pandas.read_csv(csv, index_col=0)
+                     'descriptors': descriptor_dict})
+
+    actual['events'] = tifffile.imread(tiff)
     assert actual.keys() == expected.keys()
     assert actual['start'] == expected['start']
     assert actual['descriptors'] == expected['descriptors']
     assert actual['stop'] == expected['stop']
-    assert_frame_equal(expected['events'], actual['events'])
+    assert_array_equal(expected['events'], actual['events'])
 
 
 def test_export_event_page(RE, hw):
@@ -140,26 +145,24 @@ def test_export_event_page(RE, hw):
             collector.append((name, doc))
 
     RE.subscribe(collect)
-    RE(count([hw.det], 5))
+    RE(count([hw.direct_img], 5))
 
     with tempfile.NamedTemporaryFile(mode='w') as f:
         # We don't actually need f itself, just a filepath to template on.
-        meta, *csvs = export(collector, f.name)
-    csv, = csvs
+        meta, *tiffs = export(collector, f.name)
+    tiff, = tiffs
 
     docs = (doc for name, doc in collector)
     start, descriptor, *event_pages, stop = docs
 
     expected = {}
-    expected_dict = {'data': {'det': [], 'seq_num': []}, 'time': []}
+    expected_dict = {'data': {'img': [], 'seq_num': []}, 'time': []}
     for event in events:
-        expected_dict['data']['det'].append(event['data']['det'])
+        expected_dict['data']['img'].append(event['data']['img'])
         expected_dict['data']['seq_num'].append(event['seq_num'])
         expected_dict['time'].append(event['time'])
 
-    expected['events'] = pandas.DataFrame(expected_dict['data'],
-                                          index=expected_dict['time'])
-    expected['events'].index.name = 'time'
+    expected['events'] = numpy.array(expected_dict['data']['img'])
 
     with open(meta) as f:
         actual = json.load(f)
@@ -173,11 +176,16 @@ def test_export_event_page(RE, hw):
                 new_dims.append(dim)
         actual['start']['hints']['dimensions'] = [tuple(new_dims)]
 
+    descriptor_dict = {'primary': {'meta': [descriptor],
+                                   'seq_num': expected_dict['data']['seq_num'],
+                                   'time': expected_dict['time']}}
+
     expected.update({'start': start, 'stop': stop,
-                     'descriptors': {'primary': [descriptor]}})
-    actual['events'] = pandas.read_csv(csv, index_col=0)
+                     'descriptors': descriptor_dict})
+    actual['events'] = tifffile.imread(tiff)
+
     assert actual.keys() == expected.keys()
     assert actual['start'] == expected['start']
     assert actual['descriptors'] == expected['descriptors']
     assert actual['stop'] == expected['stop']
-    assert_frame_equal(expected['events'], actual['events'])
+    assert_array_equal(expected['events'], actual['events'])

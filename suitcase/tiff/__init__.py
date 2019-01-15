@@ -10,7 +10,6 @@ import itertools
 import json
 import tifffile
 import event_model
-import numpy
 from ._version import get_versions
 
 __version__ = get_versions()['version']
