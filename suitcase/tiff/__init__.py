@@ -27,7 +27,9 @@ def export(gen, filepath, **kwargs):
 
         {'start': {...},
         'descriptors':
-            {'<stream_name>': [{...}, {...}, ...],
+            {'<stream_name>':{'meta': [{...}, {...}, ...],
+                              'seq_num': [...],
+                              'time': [...]}
             ...},
         'stop': {...}}
 
