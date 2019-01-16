@@ -25,13 +25,18 @@ def export(gen, filepath, **kwargs):
 
     The structure of the json is::
 
-        {'start': {...},
-        'descriptors':
-            {'<stream_name>':{'meta': [{...}, {...}, ...],
-                              'seq_num': [...],
-                              'time': [...]}
-            ...},
-        'stop': {...}}
+            {'metadata': {'start': start_doc, 'stop': stop_doc,
+                          'descriptors': {stream_name1: 'descriptor',
+                                          stream_name2: ...}},
+             stream_name1: {'seq_num': [], 'uid': [], 'time': [],
+                         'timestamps': {det_name1:[], det_name2:[],...},
+                         'data': {det_name1:[], det_name2:[],...}
+             stream_name2: ...}}
+
+            .. note::
+
+                This schema was chosen as the API is very similar to the
+                intake-databroker API
 
     Parameters
     ----------
@@ -49,8 +54,8 @@ def export(gen, filepath, **kwargs):
     dest : tuple
         filepaths of generated files
     """
-    meta = {}  # to be exported as JSON at the end
-    meta['descriptors'] = defaultdict(lambda: defaultdict(list))
+    meta = defaultdict(dict)  # to be exported as JSON at the end
+    meta['metadata']['descriptors'] = defaultdict(dict)
     desc_counters = defaultdict(itertools.count)
     stream_names = {}  # dict to capture stream_names for each descriptor uid
     files = {}  # map descriptor uid to file handle of tiff file
@@ -59,17 +64,17 @@ def export(gen, filepath, **kwargs):
     try:
         for name, doc in gen:
             if name == 'start':
-                if 'start' in meta:
+                if 'start' in meta['metadata']:
                     raise RuntimeError("This exporter expects documents from "
                                        "one run only.")
-                meta['start'] = doc
+                meta['metadata']['start'] = doc
             elif name == 'stop':
-                meta['stop'] = doc
+                meta['metadata']['stop'] = doc
             elif name == 'descriptor':
                 stream_name = doc.get('name')
                 sanitized_doc = event_model.sanitize_doc(doc)
                 # The line above ensures json type compatibility
-                meta['descriptors'][stream_name]['meta'].append(sanitized_doc)
+                meta['metadata']['descriptors'][stream_name] = sanitized_doc
                 filepath_ = (f"{filepath}_{stream_name}_"
                              f"{next(desc_counters[doc['uid']])}.tiff")
                 files[doc['uid']] = tifffile.TiffWriter(filepath_,
@@ -77,8 +82,13 @@ def export(gen, filepath, **kwargs):
                                                         append=True)
                 filenames[doc['uid']] = filepath_
                 stream_names[doc['uid']] = stream_name
-            elif (name == 'event' or name == 'bulk_event' or
-                  name == 'event_page'):
+                # set up a few parameters to be included in the json file
+                meta[stream_name]['seq_num'] = []
+                meta[stream_name]['time'] = []
+                meta[stream_name]['timestamps'] = {}
+                meta[stream_name]['uid'] = []
+
+            elif name in ('event', 'bulk_event', 'event_page'):
                 if name == 'event':  # convert event to an event_pages list
                     event_pages = [event_model.pack_event_page(doc)]
                 elif name == 'bulk_event':  # convert bulk_event to event_pages
@@ -87,16 +97,18 @@ def export(gen, filepath, **kwargs):
                     event_pages = [doc]
 
                 for event_page in event_pages:
-                    if event_model.verify_filled(event_page):
-                        for field in event_page['data']:
-                            for img in event_page['data'][field]:
-                                files[event_page['descriptor']].\
-                                    save(img, *kwargs)
-                        stream_name = stream_names[event_page['descriptor']]
-                        meta['descriptors'][stream_name]['seq_num'].\
-                            extend(event_page['seq_num'])
-                        meta['descriptors'][stream_name]['time'].\
-                            extend(event_page['time'])
+                    event_model.verify_filled(event_page)
+                    stream_name = stream_names[event_page['descriptor']]
+                    for field in event_page['data']:
+                        for img in event_page['data'][field]:
+                            files[event_page['descriptor']].save(img, *kwargs)
+                        if field not in meta[stream_name]['timestamps']:
+                            meta[stream_name]['timestamps'][field] = []
+                        meta[stream_name]['timestamps'][field].extend(
+                            event_page['timestamps'][field])
+                    meta[stream_name]['seq_num'].extend(event_page['seq_num'])
+                    meta[stream_name]['time'].extend(event_page['time'])
+                    meta[stream_name]['uid'].extend(event_page['uid'])
 
     finally:
         for f in files.values():
