@@ -10,10 +10,21 @@ import itertools
 import json
 import tifffile
 import event_model
+import numpy
 from ._version import get_versions
 
 __version__ = get_versions()['version']
 del get_versions
+
+
+class SuitcaseTiffError(Exception):
+    ...
+
+
+class NonSupportedDatatype(SuitcaseTiffError):
+    '''used to indicate that non-supported data type is being saved
+    '''
+    ...
 
 
 def export(gen, filepath, **kwargs):
@@ -101,7 +112,15 @@ def export(gen, filepath, **kwargs):
                     stream_name = stream_names[event_page['descriptor']]
                     for field in event_page['data']:
                         for img in event_page['data'][field]:
-                            files[event_page['descriptor']].save(img, *kwargs)
+                            # check that the data is 2D, if not raise exception
+                            if len(numpy.asarray(img).shape) == 2:
+                                files[event_page['descriptor']].save(img,
+                                                                     *kwargs)
+                            else:
+                                raise NonSupportedDatatype('one or more of the'
+                                                           ' entries for the '
+                                                           'field "{}" is not '
+                                                           '2D'.format(field))
                         if field not in meta[stream_name]['timestamps']:
                             meta[stream_name]['timestamps'][field] = []
                         meta[stream_name]['timestamps'][field].extend(

@@ -7,16 +7,9 @@ from bluesky.plans import count
 import json
 import tempfile
 import tifffile
-from suitcase.tiff import export
+from suitcase.tiff import export, SuitcaseTiffError
 import event_model
-
-
-class SuitcaseTiffError(Exception):
-    ...
-
-
-class UnknownEventType(SuitcaseTiffError):
-    ...
+import pytest
 
 
 def events_data(RE, hw, det='det', event_type='events'):
@@ -230,3 +223,7 @@ def test_export_event_pages(RE, hw):
     assert actual['metadata'] == expected['metadata']
     # check that the data, uid, time, timestamps and seq_nums are the same
     assert actual['primary'] == expected['primary']
+
+
+class UnknownEventType(SuitcaseTiffError):
+    ...
