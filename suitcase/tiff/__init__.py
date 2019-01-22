@@ -21,7 +21,7 @@ class SuitcaseTiffError(Exception):
     ...
 
 
-class NonSupportedDatatype(SuitcaseTiffError):
+class NonSupportedDataShape(SuitcaseTiffError):
     '''used to indicate that non-supported data type is being saved
     '''
     ...
@@ -113,14 +113,16 @@ def export(gen, filepath, **kwargs):
                     for field in event_page['data']:
                         for img in event_page['data'][field]:
                             # check that the data is 2D, if not raise exception
-                            if len(numpy.asarray(img).shape) == 2:
+                            if numpy.asarray(img).ndim == 2:
                                 files[event_page['descriptor']].save(img,
                                                                      *kwargs)
                             else:
-                                raise NonSupportedDatatype('one or more of the'
-                                                           ' entries for the '
-                                                           'field "{}" is not '
-                                                           '2D'.format(field))
+                                n_dim = numpy.asarray(img).ndim
+                                raise NonSupportedDataShape(
+                                    f'one or more of the entries for the field'
+                                    ' "{}" is not 2 dimensional, at least one '
+                                    'was found to be {} dimensional'
+                                    ''.format(field, n_dim))
                         if field not in meta[stream_name]['timestamps']:
                             meta[stream_name]['timestamps'][field] = []
                         meta[stream_name]['timestamps'][field].extend(
