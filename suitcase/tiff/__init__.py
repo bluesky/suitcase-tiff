@@ -6,11 +6,12 @@
 # functions.
 #
 from collections import defaultdict
-import itertools
+from pathlib import Path
 import json
 import tifffile
 import event_model
 import numpy
+import suitcase
 from ._version import get_versions
 
 __version__ = get_versions()['version']
@@ -27,7 +28,7 @@ class NonSupportedDataShape(SuitcaseTiffError):
     ...
 
 
-def export(gen, filepath, **kwargs):
+def export(gen, directory, file_prefix='', **kwargs):
     """
     Export a stream of documents to tiff file(s) and one JSON file of metadata.
 
@@ -41,21 +42,27 @@ def export(gen, filepath, **kwargs):
                                           stream_name2: ...}},
              stream_name1: {'seq_num': [], 'uid': [], 'time': [],
                          'timestamps': {det_name1:[], det_name2:[],...},
-                         'data': {det_name1:[], det_name2:[],...}
              stream_name2: ...}}
 
             .. note::
 
                 This schema was chosen as the API is very similar to the
-                intake-databroker API
+                intake-databroker API. The same schema is used for all json
+                files created with our base suitcase export functions.
 
     Parameters
     ----------
     gen : generator
         expected to yield (name, document) pairs
 
-    filepath : str
-        the filepath and filename suffix to use in the output files.
+    directory : string, Path or Wrapper
+        The filepath and filename suffix to use in the output files or a file
+        handle factory wrapper(see ADD LINK HERE). An empty string will place
+        the file in the current directory.
+
+    file_prefix : str
+        An optional prefix for the file names that will be created, default is
+        an empty string.
 
     **kwargs : kwargs
         kwargs to be passed to tifffile.TiffWriter.save.
@@ -67,10 +74,22 @@ def export(gen, filepath, **kwargs):
     """
     meta = defaultdict(dict)  # to be exported as JSON at the end
     meta['metadata']['descriptors'] = defaultdict(dict)
-    desc_counters = defaultdict(itertools.count)
     stream_names = {}  # dict to capture stream_names for each descriptor uid
     files = {}  # map descriptor uid to file handle of tiff file
     filenames = {}  # map descriptor uid to file names of tiff files
+
+    # Load up the correct wrapper.
+    if isinstance(directory, (str, Path)):
+        wrapper = suitcase.utils.MultiFileWrapper(directory)
+        directory = Path
+    else:
+        wrapper = directory
+
+    # set file_joiner to `_` if file_prefix is not empty.
+    if file_prefix:
+        file_joiner = '_'
+    else:
+        file_joiner = ''
 
     try:
         for name, doc in gen:
@@ -85,13 +104,13 @@ def export(gen, filepath, **kwargs):
                 stream_name = doc.get('name')
                 sanitized_doc = event_model.sanitize_doc(doc)
                 # The line above ensures json type compatibility
+                filename = f'{file_prefix}{file_joiner}{stream_name}.tiff'
                 meta['metadata']['descriptors'][stream_name] = sanitized_doc
-                filepath_ = (f"{filepath}_{stream_name}_"
-                             f"{next(desc_counters[doc['uid']])}.tiff")
-                files[doc['uid']] = tifffile.TiffWriter(filepath_,
+                f = wrapper.open('stream_data', 'xb')
+                files[doc['uid']] = tifffile.TiffWriter(f, filename,
                                                         bigtiff=True,
                                                         append=True)
-                filenames[doc['uid']] = filepath_
+                filenames[doc['uid']] = filename
                 stream_names[doc['uid']] = stream_name
                 # set up a few parameters to be included in the json file
                 meta[stream_name]['seq_num'] = []
@@ -135,6 +154,7 @@ def export(gen, filepath, **kwargs):
         for f in files.values():
             f.close()
 
-    with open(f"{filepath}_meta.json", 'w') as f:
+    with wrapper.open('run_metadata', f'{file_prefix}{file_joiner}meta.json',
+                      'x') as f:
         json.dump(meta, f)
     return (f.name,) + tuple(filenames[key] for key in filenames)
