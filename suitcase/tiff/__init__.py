@@ -11,7 +11,7 @@ import json
 import tifffile
 import event_model
 import numpy
-import suitcase
+import suitcase.utils
 from ._version import get_versions
 
 __version__ = get_versions()['version']
@@ -62,7 +62,17 @@ def export(gen, directory, file_prefix='', **kwargs):
 
     file_prefix : str
         An optional prefix for the file names that will be created, default is
-        an empty string.
+        an empty string.A templated string may also be used, where curly
+        brackets will be filled in with the attributes of the 'start'
+        documents.
+        e.g., `file_prefix`="scan_{start[scan_id]}-" will result in files with
+        names `scan_XXX-'stream_name'.tiff`.
+
+        .. note::
+
+            The `stop` document is excluded as it has not been recieved yet
+            when the files are created. The `descriptor` document is excluded
+            because there is multiple 'descriptor' documents.
 
     **kwargs : kwargs
         kwargs to be passed to tifffile.TiffWriter.save.
@@ -81,15 +91,9 @@ def export(gen, directory, file_prefix='', **kwargs):
     # Load up the correct wrapper.
     if isinstance(directory, (str, Path)):
         wrapper = suitcase.utils.MultiFileWrapper(directory)
-        directory = Path
+        directory = Path(directory)
     else:
         wrapper = directory
-
-    # set file_joiner to `_` if file_prefix is not empty.
-    if file_prefix:
-        file_joiner = '_'
-    else:
-        file_joiner = ''
 
     try:
         for name, doc in gen:
@@ -98,19 +102,18 @@ def export(gen, directory, file_prefix='', **kwargs):
                     raise RuntimeError("This exporter expects documents from "
                                        "one run only.")
                 meta['metadata']['start'] = doc
+                templated_file_prefix = file_prefix.format(start=doc)
             elif name == 'stop':
                 meta['metadata']['stop'] = doc
             elif name == 'descriptor':
                 stream_name = doc.get('name')
                 sanitized_doc = event_model.sanitize_doc(doc)
                 # The line above ensures json type compatibility
-                filename = f'{file_prefix}{file_joiner}{stream_name}.tiff'
+                filename = templated_file_prefix + f'{stream_name}.tiff'
                 meta['metadata']['descriptors'][stream_name] = sanitized_doc
-                f = wrapper.open('stream_data', 'xb')
-                files[doc['uid']] = tifffile.TiffWriter(f, filename,
-                                                        bigtiff=True,
-                                                        append=True)
-                filenames[doc['uid']] = filename
+                f = wrapper.open('stream_data', filename, 'xb')
+                files[doc['uid']] = tifffile.TiffWriter(f, bigtiff=True)
+                filenames[doc['uid']] = f.name
                 stream_names[doc['uid']] = stream_name
                 # set up a few parameters to be included in the json file
                 meta[stream_name]['seq_num'] = []
@@ -154,7 +157,7 @@ def export(gen, directory, file_prefix='', **kwargs):
         for f in files.values():
             f.close()
 
-    with wrapper.open('run_metadata', f'{file_prefix}{file_joiner}meta.json',
+    with wrapper.open('run_metadata', f'{templated_file_prefix}meta.json',
                       'x') as f:
         json.dump(meta, f)
-    return (f.name,) + tuple(filenames[key] for key in filenames)
+    return wrapper._artifacts
