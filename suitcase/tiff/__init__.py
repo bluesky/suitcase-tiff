@@ -12,6 +12,7 @@ import tifffile
 import event_model
 import numpy
 import suitcase.utils
+import collections
 from ._version import get_versions
 
 __version__ = get_versions()['version']
@@ -33,7 +34,7 @@ def export(gen, directory, file_prefix='', **kwargs):
     Export a stream of documents to tiff file(s) and one JSON file of metadata.
 
     Creates {filepath}_meta.json and then {filepath}_{stream_name}.tiff
-    for every Event stream.
+    for every Event stream. It can also serialize the data to any file handle.
 
     The structure of the json is::
 
@@ -79,85 +80,170 @@ def export(gen, directory, file_prefix='', **kwargs):
 
     Returns
     -------
-    dest : tuple
-        filepaths of generated files
+    dest : dict
+        dict mapping the 'labels' to the file names
     """
-    meta = defaultdict(dict)  # to be exported as JSON at the end
-    meta['metadata']['descriptors'] = defaultdict(dict)
-    stream_names = {}  # dict to capture stream_names for each descriptor uid
-    files = {}  # map descriptor uid to file handle of tiff file
-    filenames = {}  # map descriptor uid to file names of tiff files
 
-    # Load up the correct wrapper.
-    if isinstance(directory, (str, Path)):
-        wrapper = suitcase.utils.MultiFileWrapper(directory)
-        directory = Path(directory)
-    else:
-        wrapper = directory
-
+    serializer = Serializer(directory, file_prefix, **kwargs)
     try:
-        for name, doc in gen:
-            if name == 'start':
-                if 'start' in meta['metadata']:
-                    raise RuntimeError("This exporter expects documents from "
-                                       "one run only.")
-                meta['metadata']['start'] = doc
-                templated_file_prefix = file_prefix.format(start=doc)
-            elif name == 'stop':
-                meta['metadata']['stop'] = doc
-            elif name == 'descriptor':
-                stream_name = doc.get('name')
-                sanitized_doc = event_model.sanitize_doc(doc)
-                # The line above ensures json type compatibility
-                filename = templated_file_prefix + f'{stream_name}.tiff'
-                meta['metadata']['descriptors'][stream_name] = sanitized_doc
-                f = wrapper.open('stream_data', filename, 'xb')
-                files[doc['uid']] = tifffile.TiffWriter(f, bigtiff=True)
-                filenames[doc['uid']] = f.name
-                stream_names[doc['uid']] = stream_name
-                # set up a few parameters to be included in the json file
-                meta[stream_name]['seq_num'] = []
-                meta[stream_name]['time'] = []
-                meta[stream_name]['timestamps'] = {}
-                meta[stream_name]['uid'] = []
-
-            elif name in ('event', 'bulk_event', 'event_page'):
-                if name == 'event':  # convert event to an event_pages list
-                    event_pages = [event_model.pack_event_page(doc)]
-                elif name == 'bulk_event':  # convert bulk_event to event_pages
-                    event_pages = event_model.bulk_events_to_event_pages(doc)
-                else:  # convert an event_page to an event_pages list.
-                    event_pages = [doc]
-
-                for event_page in event_pages:
-                    event_model.verify_filled(event_page)
-                    stream_name = stream_names[event_page['descriptor']]
-                    for field in event_page['data']:
-                        for img in event_page['data'][field]:
-                            # check that the data is 2D, if not raise exception
-                            if numpy.asarray(img).ndim == 2:
-                                files[event_page['descriptor']].save(img,
-                                                                     *kwargs)
-                            else:
-                                n_dim = numpy.asarray(img).ndim
-                                raise NonSupportedDataShape(
-                                    f'one or more of the entries for the field'
-                                    ' "{}" is not 2 dimensional, at least one '
-                                    'was found to be {} dimensional'
-                                    ''.format(field, n_dim))
-                        if field not in meta[stream_name]['timestamps']:
-                            meta[stream_name]['timestamps'][field] = []
-                        meta[stream_name]['timestamps'][field].extend(
-                            event_page['timestamps'][field])
-                    meta[stream_name]['seq_num'].extend(event_page['seq_num'])
-                    meta[stream_name]['time'].extend(event_page['time'])
-                    meta[stream_name]['uid'].extend(event_page['uid'])
-
+        for item in gen:
+            serializer(*item)
     finally:
-        for f in files.values():
-            f.close()
+        for key, value in serializer.artifacts.items():
+            for artifact in value:
+                artifact.close()
 
-    with wrapper.open('run_metadata', f'{templated_file_prefix}meta.json',
-                      'x') as f:
-        json.dump(meta, f)
-    return wrapper._artifacts
+    return serializer.manager_artifacts
+
+
+class Serializer(event_model.DocumentRouter):
+    """ Serialize a set of (name, document) tuples to tiff format(s) and one a
+    JSON format for the metadata.
+
+    The structure of the json is::
+
+            {'metadata': {'start': start_doc, 'stop': stop_doc,
+                          'descriptors': {stream_name1: 'descriptor',
+                                          stream_name2: ...}},
+             stream_name1: {'seq_num': [], 'uid': [], 'time': [],
+                         'timestamps': {det_name1:[], det_name2:[],...},
+             stream_name2: ...}}
+
+            .. note::
+
+                This schema was chosen as the API is very similar to the
+                intake-databroker API. The same schema is used for all json
+                files created with our base suitcase export functions.
+
+    Parameters
+    ----------
+    gen : generator
+        expected to yield (name, document) pairs
+
+    directory : string, Path or Wrapper
+        The filepath and filename suffix to use in the output files or a file
+        handle factory wrapper(see ADD LINK HERE). An empty string will place
+        the file in the current directory.
+
+    file_prefix : str
+        An optional prefix for the file names that will be created, default is
+        an empty string.A templated string may also be used, where curly
+        brackets will be filled in with the attributes of the 'start'
+        documents.
+        e.g., `file_prefix`="scan_{start[scan_id]}-" will result in files with
+        names `scan_XXX-'stream_name'.tiff`.
+
+        .. note::
+
+            The `stop` document is excluded as it has not been recieved yet
+            when the files are created. The `descriptor` document is excluded
+            because there is multiple 'descriptor' documents.
+
+    **kwargs : kwargs
+        kwargs to be passed to tifffile.TiffWriter.save.
+
+    .. note::
+
+        It is the resonsibility of whatever creates this class to close the
+        used file handles when done. To do this use the lines below when
+        everything is complete:
+
+        .. code::
+            for artifact in serializer.artifacts:
+                artifacts.close()
+    """
+
+    def __init__(self, directory, file_prefix, **kwargs):
+
+        if isinstance(directory, (str, Path)):
+            self.manager = suitcase.utils.MultiFileManager(directory)
+            self.directory = Path(directory)
+        else:
+            self.manager = directory
+
+        self.manager_artifacts = self.manager._artifacts
+        self.artifacts = collections.defaultdict(list)
+        self._meta = defaultdict(dict)  # to be exported as JSON at the end
+        self._meta['metadata']['descriptors'] = defaultdict(dict)
+        self._stream_names = {}  # maps stream_names to each descriptor uids
+        self._files = {}  # map descriptor uid to file handle of tiff file
+        self._filenames = {}  # map descriptor uid to file names of tiff files
+        self._file_prefix = file_prefix
+        self._templated_file_prefix = ''
+        self._kwargs = kwargs
+
+    def start(self, doc):
+        # raise an error if this is the second `start` document seen.
+        if 'start' in self._meta['metadata']:
+            raise RuntimeError(
+                "The serializer in suitcase.tiff expects documents from one "
+                "run only. Two `start` documents where sent to it")
+
+        # add the start doc to self._meta and format self._file_prefix
+        self._meta['metadata']['start'] = doc
+        self._templated_file_prefix = self._file_prefix.format(**doc)
+
+        # return the start document
+        return doc
+
+    def stop(self, doc):
+        # add the stop doc to self._meta.
+        self._meta['metadata']['stop'] = doc
+
+        # open a json file for the metadata and add self._meta to it.
+        f = self.manager.open('run_metadata',
+                              f'{self._templated_file_prefix}meta.json', 'xt')
+        json.dump(self._meta, f)
+        self.artifacts['run_metadata'].append(f)
+
+        # return the stop document
+        return doc
+
+    def descriptor(self, doc):
+        # extract some useful info from the doc
+        stream_name = doc.get('name')
+        filename = self._templated_file_prefix + f'{stream_name}.tiff'
+        # replace numpy objects with python ones to ensure json compatibility
+        sanitized_doc = event_model.sanitize_doc(doc)
+        # Add the doc to self._meta
+        self._meta['metadata']['descriptors'][stream_name] = sanitized_doc
+        # initialize some items in self._meta for use by event_page later
+        self._meta[stream_name]['seq_num'] = []
+        self._meta[stream_name]['time'] = []
+        self._meta[stream_name]['timestamps'] = {}
+        self._meta[stream_name]['uid'] = []
+        # open the file handle to write the event_page data to later
+        f = self.manager.open('stream_data', filename, 'xb')
+        # use the file handle to create the tiff file writing object
+        self._files[doc['uid']] = tifffile.TiffWriter(f, bigtiff=True)
+        self.artifacts['stream_data'].append(self._files[doc['uid']])
+        # record the filenames and stream names in the associated dictionaries
+        self._filenames[doc['uid']] = f.name
+        self._stream_names[doc['uid']] = stream_name
+
+        # return the descriptor doc
+
+    def event_page(self, doc):
+        event_model.verify_filled(doc)
+        stream_name = self._stream_names[doc['descriptor']]
+        for field in doc['data']:
+            for img in doc['data'][field]:
+                # check that the data is 2D, if not raise exception
+                if numpy.asarray(img).ndim == 2:
+                    self._files[doc['descriptor']].save(img, *self._kwargs)
+                else:
+                    n_dim = numpy.asarray(img).ndim
+                    raise NonSupportedDataShape(
+                        'one or more of the entries for the field "{}" is not'
+                        '2 dimensional, at least one was found to be {} '
+                        'dimensional'.format(field, n_dim))
+            if field not in self._meta[stream_name]['timestamps']:
+                self._meta[stream_name]['timestamps'][field] = []
+            self._meta[stream_name]['timestamps'][field].extend(
+                doc['timestamps'][field])
+        self._meta[stream_name]['seq_num'].extend(doc['seq_num'])
+        self._meta[stream_name]['time'].extend(doc['time'])
+        self._meta[stream_name]['uid'].extend(doc['uid'])
+
+        # return the event_page document
+        return doc
