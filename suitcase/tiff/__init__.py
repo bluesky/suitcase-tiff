@@ -284,8 +284,10 @@ class Serializer(event_model.DocumentRouter):
 
             The data in Events might be structured as an Event, an EventPage,
             or a "bulk event" (deprecated). The DocumentRouter base class takes
-            care of routing all three representations through here, so no
-            further action is required in this class.
+            care of first transforming the other repsentations into an
+            EventPage and then routing them through here, so no further action
+            is required in this class. We can assume we will always receive an
+            EventPage.
 
         Parameters:
         -----------
