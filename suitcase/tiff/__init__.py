@@ -199,7 +199,7 @@ class Serializer(event_model.DocumentRouter):
         Parameters:
         -----------
         doc : dict
-            The document dictionary associated with the start message.
+            RunStart document
         '''
 
         # raise an error if this is the second `start` document seen.
@@ -226,7 +226,7 @@ class Serializer(event_model.DocumentRouter):
         Parameters:
         -----------
         doc : dict
-            The document dictionary associated with the stop message.
+            RunStop document
         '''
         # add the stop doc to self._meta.
         self._meta['metadata']['stop'] = doc
@@ -252,8 +252,7 @@ class Serializer(event_model.DocumentRouter):
         Parameters:
         -----------
         doc : dict
-            The document dictionary associated with the descriptor message.
-
+            EventDescriptor document
         '''
         # extract some useful info from the doc
         stream_name = doc.get('name')
@@ -296,8 +295,7 @@ class Serializer(event_model.DocumentRouter):
         Parameters:
         -----------
         doc : dict
-            The document dictionary associated with the event_page message.
-
+            EventPage document
         '''
         event_model.verify_filled(doc)
         stream_name = self._stream_names[doc['descriptor']]
