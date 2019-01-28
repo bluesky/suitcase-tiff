@@ -287,10 +287,10 @@ class Serializer(event_model.DocumentRouter):
 
         .. note::
 
-            event documents and bulk_events documents are processed by the
-            `event_model.document_router` methods `event` and `bulk_events`.
-            Both these methods convert the documents to `event_page` syntax and
-            call this `event_page` method, hence adding them to the files.
+            The data in Events might be structured as an Event, an EventPage,
+            or a "bulk event" (deprecated). The DocumentRouter base class takes
+            care of routing all three representations through here, so no
+            further action is required in this class.
 
         Parameters:
         -----------
