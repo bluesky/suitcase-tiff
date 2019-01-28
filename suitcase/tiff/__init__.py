@@ -1,4 +1,4 @@
-# suitcase subpackages must follow strict naming and interface conventions. The
+# Suitcase subpackages must follow strict naming and interface conventions. The
 # public API should include some subset of the following. Any functions not
 # implemented should be omitted, rather than included and made to raise
 # NotImplementError, so that a client importing this library can immediately
