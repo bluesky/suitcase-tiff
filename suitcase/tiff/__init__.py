@@ -89,18 +89,16 @@ def export(gen, directory, file_prefix='', **kwargs):
         for item in gen:
             serializer(*item)
     finally:
-        for key, value in serializer.artifacts.items():
-            for artifact in value:
-                artifact.close()
+        serializer.close()
 
-    return serializer.manager_artifacts
+    return serializer.artifacts
 
 
 class Serializer(event_model.DocumentRouter):
     """ Serialize a set of (name, document) tuples to tiff format(s) and one a
     JSON format for the metadata.
 
-    The structure of the json is::
+    The structure of the json is:
 
             {'metadata': {'start': start_doc, 'stop': stop_doc,
                           'descriptors': {stream_name1: 'descriptor',
@@ -161,8 +159,7 @@ class Serializer(event_model.DocumentRouter):
         else:
             self.manager = directory
 
-        self.manager_artifacts = self.manager._artifacts
-        self.artifacts = collections.defaultdict(list)
+        self.artifacts = self.manager._artifacts
         self._meta = defaultdict(dict)  # to be exported as JSON at the end
         self._meta['metadata']['descriptors'] = defaultdict(dict)
         self._stream_names = {}  # maps stream_names to each descriptor uids
@@ -172,7 +169,20 @@ class Serializer(event_model.DocumentRouter):
         self._templated_file_prefix = ''
         self._kwargs = kwargs
 
+
     def start(self, doc):
+        '''Add `start` document information to the metadata dictionary.
+
+        This method adds the start document information to the metadata
+        dictionary. In addition it checks that only one `start` document is
+        seen.
+
+        Parameters:
+        -----------
+        doc : dict
+            The document dictionary associated with the start message.
+        '''
+
         # raise an error if this is the second `start` document seen.
         if 'start' in self._meta['metadata']:
             raise RuntimeError(
@@ -186,7 +196,19 @@ class Serializer(event_model.DocumentRouter):
         # return the start document
         return doc
 
+
     def stop(self, doc):
+        '''Add `stop` document information to the metadata dictionary.
+
+        This method adds the stop document information to the metadata
+        dictionary. In addition it also creates the metadata '.json' file and
+        exports the metadata dictionary to it.
+
+        Parameters:
+        -----------
+        doc : dict
+            The document dictionary associated with the stop message.
+        '''
         # add the stop doc to self._meta.
         self._meta['metadata']['stop'] = doc
 
@@ -195,11 +217,25 @@ class Serializer(event_model.DocumentRouter):
                               f'{self._templated_file_prefix}meta.json', 'xt')
         json.dump(self._meta, f)
         self.artifacts['run_metadata'].append(f)
+        self._files['meta'] = f
 
         # return the stop document
         return doc
 
+
     def descriptor(self, doc):
+        '''Add `descriptor` document information to the metadata dictionary.
+
+        This method adds the descriptor document information to the metadata
+        dictionary. In addition it also creates the file for data with the
+        stream_name given by the descriptor doc for later use.
+
+        Parameters:
+        -----------
+        doc : dict
+            The document dictionary associated with the descriptor message.
+
+        '''
         # extract some useful info from the doc
         stream_name = doc.get('name')
         filename = self._templated_file_prefix + f'{stream_name}.tiff'
@@ -222,8 +258,29 @@ class Serializer(event_model.DocumentRouter):
         self._stream_names[doc['uid']] = stream_name
 
         # return the descriptor doc
+        return doc
+
 
     def event_page(self, doc):
+        '''Add event page document information to the ".tiff" file.
+
+        This method adds event_page document information to the ".tiff" file
+        and adds the extra information in the document to the metadata ".json"
+        file.
+
+        .. note::
+
+            event documents and bulk_events documents are processed by the
+            `event_model.document_router` methods `event` and `bulk_events`.
+            Both these methods convert the documents to `event_page` syntax and
+            call this `event_page` method, hence adding them to the files.
+
+        Parameters:
+        -----------
+        doc : dict
+            The document dictionary associated with the event_page message.
+
+        '''
         event_model.verify_filled(doc)
         stream_name = self._stream_names[doc['descriptor']]
         for field in doc['data']:
@@ -247,3 +304,9 @@ class Serializer(event_model.DocumentRouter):
 
         # return the event_page document
         return doc
+
+    def close(self):
+        '''close all of the files opened by this serializer
+        '''
+        for file in self._files.values():
+            file.close()
