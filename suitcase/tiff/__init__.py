@@ -29,7 +29,7 @@ class NonSupportedDataShape(SuitcaseTiffError):
     ...
 
 
-def export(gen, directory, file_prefix='', **kwargs):
+def export(gen, directory, file_prefix='{uid}', **kwargs):
     """
     Export a stream of documents to tiff file(s) and one JSON file of metadata.
 
@@ -41,9 +41,10 @@ def export(gen, directory, file_prefix='', **kwargs):
             {'metadata': {'start': start_doc, 'stop': stop_doc,
                           'descriptors': {stream_name1: 'descriptor',
                                           stream_name2: ...}},
-             stream_name1: {'seq_num': [], 'uid': [], 'time': [],
-                         'timestamps': {det_name1:[], det_name2:[],...},
-             stream_name2: ...}}
+             'streams': {stream_name1: {'seq_num': [], 'uid': [], 'time': [],
+                                        'timestamps': {det_name1:[],
+                                                       det_name2:[],...},}
+                         stream_name2: ...}}
 
             .. note::
 
@@ -103,9 +104,10 @@ class Serializer(event_model.DocumentRouter):
             {'metadata': {'start': start_doc, 'stop': stop_doc,
                           'descriptors': {stream_name1: 'descriptor',
                                           stream_name2: ...}},
-             stream_name1: {'seq_num': [], 'uid': [], 'time': [],
-                         'timestamps': {det_name1:[], det_name2:[],...},
-             stream_name2: ...}}
+             'streams': {stream_name1: {'seq_num': [], 'uid': [], 'time': [],
+                                        'timestamps': {det_name1:[],
+                                                       det_name2:[],...},}
+                         stream_name2: ...}}
 
             .. note::
 
@@ -151,17 +153,17 @@ class Serializer(event_model.DocumentRouter):
                 artifacts.close()
     """
 
-    def __init__(self, directory, file_prefix, **kwargs):
+    def __init__(self, directory, file_prefix='{uid}', **kwargs):
 
         if isinstance(directory, (str, Path)):
             self.manager = suitcase.utils.MultiFileManager(directory)
-            self.directory = Path(directory)
         else:
             self.manager = directory
 
         self.artifacts = self.manager._artifacts
         self._meta = defaultdict(dict)  # to be exported as JSON at the end
         self._meta['metadata']['descriptors'] = defaultdict(dict)
+        self._meta['streams'] = defaultdict(dict)
         self._stream_names = {}  # maps stream_names to each descriptor uids
         self._files = {}  # map descriptor uid to file handle of tiff file
         self._filenames = {}  # map descriptor uid to file names of tiff files
@@ -238,21 +240,20 @@ class Serializer(event_model.DocumentRouter):
         '''
         # extract some useful info from the doc
         stream_name = doc.get('name')
-        filename = self._templated_file_prefix + f'{stream_name}.tiff'
+        filename = f'{self._templated_file_prefix}{stream_name}.tiff'
         # replace numpy objects with python ones to ensure json compatibility
         sanitized_doc = event_model.sanitize_doc(doc)
         # Add the doc to self._meta
         self._meta['metadata']['descriptors'][stream_name] = sanitized_doc
         # initialize some items in self._meta for use by event_page later
-        self._meta[stream_name]['seq_num'] = []
-        self._meta[stream_name]['time'] = []
-        self._meta[stream_name]['timestamps'] = {}
-        self._meta[stream_name]['uid'] = []
+        self._meta['streams'][stream_name]['seq_num'] = []
+        self._meta['streams'][stream_name]['time'] = []
+        self._meta['streams'][stream_name]['timestamps'] = {}
+        self._meta['streams'][stream_name]['uid'] = []
         # open the file handle to write the event_page data to later
         f = self.manager.open('stream_data', filename, 'xb')
         # use the file handle to create the tiff file writing object
         self._files[doc['uid']] = tifffile.TiffWriter(f, bigtiff=True)
-        self.artifacts['stream_data'].append(self._files[doc['uid']])
         # record the filenames and stream names in the associated dictionaries
         self._filenames[doc['uid']] = f.name
         self._stream_names[doc['uid']] = stream_name
@@ -294,13 +295,13 @@ class Serializer(event_model.DocumentRouter):
                         'one or more of the entries for the field "{}" is not'
                         '2 dimensional, at least one was found to be {} '
                         'dimensional'.format(field, n_dim))
-            if field not in self._meta[stream_name]['timestamps']:
-                self._meta[stream_name]['timestamps'][field] = []
-            self._meta[stream_name]['timestamps'][field].extend(
+            if field not in self._meta['streams'][stream_name]['timestamps']:
+                self._meta['streams'][stream_name]['timestamps'][field] = []
+            self._meta['streams'][stream_name]['timestamps'][field].extend(
                 doc['timestamps'][field])
-        self._meta[stream_name]['seq_num'].extend(doc['seq_num'])
-        self._meta[stream_name]['time'].extend(doc['time'])
-        self._meta[stream_name]['uid'].extend(doc['uid'])
+        self._meta['streams'][stream_name]['seq_num'].extend(doc['seq_num'])
+        self._meta['streams'][stream_name]['time'].extend(doc['time'])
+        self._meta['streams'][stream_name]['uid'].extend(doc['uid'])
 
         # return the event_page document
         return doc
