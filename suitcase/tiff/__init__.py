@@ -24,67 +24,86 @@ class SuitcaseTiffError(Exception):
 
 
 class NonSupportedDataShape(SuitcaseTiffError):
-    '''used to indicate that non-supported data type is being saved
+    '''used to indicate that non-supported data shape is being saved
     '''
     ...
 
 
 def export(gen, directory, file_prefix='{uid}', **kwargs):
     """
-    Export a stream of documents to tiff file(s) and one JSON file of metadata.
+    Export a stream of documents to TIFF stack(s) and one JSON file.
 
-    Creates {filepath}_meta.json and then {filepath}_{stream_name}.tiff
-    for every Event stream. It can also serialize the data to any file handle.
+    This creates one file named ``<filepath>_meta.json`` and a file named
+    ``<filepath>_{stream_name}.tiff`` for every Event stream.
 
-    The structure of the json is::
+    The structure of the JSON is::
 
-            {'metadata': {'start': start_doc, 'stop': stop_doc,
-                          'descriptors': {stream_name1: 'descriptor',
-                                          stream_name2: ...}},
-             'streams': {stream_name1: {'seq_num': [], 'uid': [], 'time': [],
-                                        'timestamps': {det_name1:[],
-                                                       det_name2:[],...},}
-                         stream_name2: ...}}
+        {'metadata': {'start': start_doc, 'stop': stop_doc,
+                        'descriptors': {stream_name1: 'descriptor',
+                                        stream_name2: ...}},
+            'streams': {stream_name1: {'seq_num': [], 'uid': [], 'time': [],
+                                    'timestamps': {det_name1:[],
+                                                    det_name2:[],...},}
+                        stream_name2: ...}}
 
-            .. note::
+    .. note::
 
-                This schema was chosen as the API is very similar to the
-                intake-databroker API. The same schema is used for all json
-                files created with our base suitcase export functions.
+        This can alternatively be used to write data to generic buffers rather
+        than creating files on disk. See the documentation for the
+        ``directory`` parameter below.
 
     Parameters
     ----------
     gen : generator
-        expected to yield (name, document) pairs
+        xpected to yield ``(name, document)`` pairs
 
-    directory : string, Path or Wrapper
-        The filepath and filename suffix to use in the output files or a file
-        handle factory wrapper(see ADD LINK HERE). An empty string will place
-        the file in the current directory.
+    directory : string, Path or Manager.
+        For basic uses, this should be the path to the output directory given
+        as a string or Path object. Use an empty string ``''`` to place files
+        in the current working directory.
 
-    file_prefix : str
-        An optional prefix for the file names that will be created, default is
-        an empty string.A templated string may also be used, where curly
-        brackets will be filled in with the attributes of the 'start'
-        documents.
-        e.g., `file_prefix`="scan_{start[scan_id]}-" will result in files with
-        names `scan_XXX-'stream_name'.tiff`.
+        In advanced applications, this may direct the serialized output to a
+        memory buffer, network socket, or other writable buffer. It should be
+        an instance of ``suitcase.utils.MemoryBufferManager`` and
+        ``suitcase.utils.MultiFileManager`` or any object implementing that
+        inferface. See the suitcase documentation (LINK ONCE WRITTEN) for
+        details.
 
-        .. note::
-
-            The `stop` document is excluded as it has not been recieved yet
-            when the files are created. The `descriptor` document is excluded
-            because there is multiple 'descriptor' documents.
+    file_prefix : str, optional
+        The first part of the filename of the generated output files. This
+        string may include templates as in ``{proposal_id}-{sample_name}``,
+        which are populated from the RunStart document. The default value is
+        ``{uid}`` which is guaranteed to be present and unique. A more
+        descriptive value depends on the application and is therefore left to
+        the user.
 
     **kwargs : kwargs
-        kwargs to be passed to tifffile.TiffWriter.save.
+        kwargs to be passed to ``tifffile.TiffWriter.save``.
 
     Returns
     -------
     dest : dict
-        dict mapping the 'labels' to the file names
-    """
+        dict mapping the 'labels' to lists of file names
 
+    Examples
+    --------
+
+    Generate files with unique-identifer names in the current directory.
+
+    >>> export(gen, '')
+
+    Generate files with more readable metadata in the file names.
+
+    >>> export(gen, '', '{plan_name}-{motors}-')
+
+    Include the experiment's start time formatted as YY-MM-DD_HH-MM.
+
+    >>> export(gen, '', '{time:%%Y-%%m-%%d_%%H:%%M}')
+
+    Place the files in a different directory, such as on a mounted USB stick.
+
+    >>> export(gen, '/path/to/my_usb_stick')
+    """
     serializer = Serializer(directory, file_prefix, **kwargs)
     try:
         for item in gen:
@@ -96,63 +115,61 @@ def export(gen, directory, file_prefix='{uid}', **kwargs):
 
 
 class Serializer(event_model.DocumentRouter):
-    """ Serialize a set of (name, document) tuples to tiff format(s) and one a
-    JSON format for the metadata.
+    """
+    Serialize a stream of documents to TIFF stack(s) and one JSON file.
 
-    The structure of the json is:
+    This creates one file named ``<filepath>_meta.json`` and a file named
+    ``<filepath>_{stream_name}.tiff`` for every Event stream.
 
-            {'metadata': {'start': start_doc, 'stop': stop_doc,
-                          'descriptors': {stream_name1: 'descriptor',
-                                          stream_name2: ...}},
-             'streams': {stream_name1: {'seq_num': [], 'uid': [], 'time': [],
-                                        'timestamps': {det_name1:[],
-                                                       det_name2:[],...},}
-                         stream_name2: ...}}
+    The structure of the JSON is::
 
-            .. note::
+        {'metadata': {'start': start_doc, 'stop': stop_doc,
+                        'descriptors': {stream_name1: 'descriptor',
+                                        stream_name2: ...}},
+            'streams': {stream_name1: {'seq_num': [], 'uid': [], 'time': [],
+                                    'timestamps': {det_name1:[],
+                                                    det_name2:[],...},}
+                        stream_name2: ...}}
 
-                This schema was chosen as the API is very similar to the
-                intake-databroker API. The same schema is used for all json
-                files created with our base suitcase export functions.
+    .. note::
+
+        This can alternatively be used to write data to generic buffers rather
+        than creating files on disk. See the documentation for the
+        ``directory`` parameter below.
 
     Parameters
     ----------
     gen : generator
-        expected to yield (name, document) pairs
+        xpected to yield ``(name, document)`` pairs
 
-    directory : string, Path or Wrapper
-        The filepath and filename suffix to use in the output files or a file
-        handle factory wrapper(see ADD LINK HERE). An empty string will place
-        the file in the current directory.
+    directory : string, Path or Manager.
+        For basic uses, this should be the path to the output directory given
+        as a string or Path object. Use an empty string ``''`` to place files
+        in the current working directory.
 
-    file_prefix : str
-        An optional prefix for the file names that will be created, default is
-        an empty string.A templated string may also be used, where curly
-        brackets will be filled in with the attributes of the 'start'
-        documents.
-        e.g., `file_prefix`="scan_{start[scan_id]}-" will result in files with
-        names `scan_XXX-'stream_name'.tiff`.
+        In advanced applications, this may direct the serialized output to a
+        memory buffer, network socket, or other writable buffer. It should be
+        an instance of ``suitcase.utils.MemoryBufferManager`` and
+        ``suitcase.utils.MultiFileManager`` or any object implementing that
+        inferface. See the suitcase documentation (LINK ONCE WRITTEN) for
+        details.
 
-        .. note::
-
-            The `stop` document is excluded as it has not been recieved yet
-            when the files are created. The `descriptor` document is excluded
-            because there is multiple 'descriptor' documents.
+    file_prefix : str, optional
+        The first part of the filename of the generated output files. This
+        string may include templates as in ``{proposal_id}-{sample_name}``,
+        which are populated from the RunStart document. The default value is
+        ``{uid}`` which is guaranteed to be present and unique. A more
+        descriptive value depends on the application and is therefore left to
+        the user.
 
     **kwargs : kwargs
-        kwargs to be passed to tifffile.TiffWriter.save.
+        kwargs to be passed to ``tifffile.TiffWriter.save``.
 
-    .. note::
-
-        It is the resonsibility of whatever creates this class to close the
-        used file handles when done. To do this use the lines below when
-        everything is complete:
-
-        .. code::
-            for artifact in serializer.artifacts:
-                artifacts.close()
+    Returns
+    -------
+    dest : dict
+        dict mapping the 'labels' to lists of file names
     """
-
     def __init__(self, directory, file_prefix='{uid}', **kwargs):
 
         if isinstance(directory, (str, Path)):
