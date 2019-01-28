@@ -12,7 +12,6 @@ import tifffile
 import event_model
 import numpy
 import suitcase.utils
-import collections
 from ._version import get_versions
 
 __version__ = get_versions()['version']
