@@ -322,7 +322,7 @@ class Serializer(event_model.DocumentRouter):
         return doc
 
     def close(self):
-        '''close all of the files opened by this serializer
+        '''Close all of the files opened by this Serializer.
         '''
         for file in self._files.values():
             file.close()
