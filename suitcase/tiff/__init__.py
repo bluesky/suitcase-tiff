@@ -28,7 +28,7 @@ class NonSupportedDataShape(SuitcaseTiffError):
     ...
 
 
-def export(gen, directory, file_prefix='{uid}', **kwargs):
+def export(gen, directory, file_prefix='{uid}-', **kwargs):
     """
     Export a stream of documents to TIFF stack(s) and one JSON file.
 
@@ -70,9 +70,9 @@ def export(gen, directory, file_prefix='{uid}', **kwargs):
 
     file_prefix : str, optional
         The first part of the filename of the generated output files. This
-        string may include templates as in ``{proposal_id}-{sample_name}``,
+        string may include templates as in ``{proposal_id}-{sample_name}-``,
         which are populated from the RunStart document. The default value is
-        ``{uid}`` which is guaranteed to be present and unique. A more
+        ``{uid}=`` which is guaranteed to be present and unique. A more
         descriptive value depends on the application and is therefore left to
         the user.
 
@@ -155,9 +155,9 @@ class Serializer(event_model.DocumentRouter):
 
     file_prefix : str, optional
         The first part of the filename of the generated output files. This
-        string may include templates as in ``{proposal_id}-{sample_name}``,
+        string may include templates as in ``{proposal_id}-{sample_name}-``,
         which are populated from the RunStart document. The default value is
-        ``{uid}`` which is guaranteed to be present and unique. A more
+        ``{uid}-`` which is guaranteed to be present and unique. A more
         descriptive value depends on the application and is therefore left to
         the user.
 
@@ -169,7 +169,7 @@ class Serializer(event_model.DocumentRouter):
     dest : dict
         dict mapping the 'labels' to lists of file names
     """
-    def __init__(self, directory, file_prefix='{uid}', **kwargs):
+    def __init__(self, directory, file_prefix='{uid}-', **kwargs):
 
         if isinstance(directory, (str, Path)):
             self.manager = suitcase.utils.MultiFileManager(directory)
