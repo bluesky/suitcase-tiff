@@ -187,7 +187,6 @@ class Serializer(event_model.DocumentRouter):
         self._templated_file_prefix = ''
         self._kwargs = kwargs
 
-
     def start(self, doc):
         '''Add `start` document information to the metadata dictionary.
 
@@ -214,7 +213,6 @@ class Serializer(event_model.DocumentRouter):
         # return the start document
         return doc
 
-
     def stop(self, doc):
         '''Add `stop` document information to the metadata dictionary.
 
@@ -239,7 +237,6 @@ class Serializer(event_model.DocumentRouter):
 
         # return the stop document
         return doc
-
 
     def descriptor(self, doc):
         '''Add `descriptor` document information to the metadata dictionary.
@@ -275,7 +272,6 @@ class Serializer(event_model.DocumentRouter):
 
         # return the descriptor doc
         return doc
-
 
     def event_page(self, doc):
         '''Add event page document information to the ".tiff" file.
