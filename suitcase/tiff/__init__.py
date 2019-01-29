@@ -39,11 +39,13 @@ def export(gen, directory, file_prefix='{uid}-', **kwargs):
     The structure of the JSON is::
 
         {'metadata': {'start': start_doc, 'stop': stop_doc,
-                        'descriptors': {stream_name1: 'descriptor',
+                        'descriptors': {stream_name1: {
+                                            'descriptor uid':descriptor_doc},
                                         stream_name2: ...}},
             'streams': {stream_name1: {'seq_num': [], 'uid': [], 'time': [],
-                                    'timestamps': {det_name1:[],
-                                                    det_name2:[],...},}
+                                       'descriptor' : [],
+                                       'timestamps': {det_name1:[],
+                                                      det_name2:[],...},}
                         stream_name2: ...}}
 
     .. note::
@@ -125,11 +127,13 @@ class Serializer(event_model.DocumentRouter):
     The structure of the JSON is::
 
         {'metadata': {'start': start_doc, 'stop': stop_doc,
-                        'descriptors': {stream_name1: 'descriptor',
+                        'descriptors': {stream_name1: {
+                                            'descriptor uid':descriptor_doc},
                                         stream_name2: ...}},
             'streams': {stream_name1: {'seq_num': [], 'uid': [], 'time': [],
-                                    'timestamps': {det_name1:[],
-                                                    det_name2:[],...},}
+                                       'descriptor' : [],
+                                       'timestamps': {det_name1:[],
+                                                      det_name2:[],...},}
                         stream_name2: ...}}
 
     .. note::
@@ -180,7 +184,8 @@ class Serializer(event_model.DocumentRouter):
 
         self.artifacts = self.manager._artifacts
         self._meta = defaultdict(dict)  # to be exported as JSON at the end
-        self._meta['metadata']['descriptors'] = defaultdict(dict)
+        self._meta['metadata']['descriptors'] = defaultdict(lambda:
+                                                            defaultdict(dict))
         self._meta['streams'] = defaultdict(dict)
         self._stream_names = {}  # maps stream_names to each descriptor uids
         self._files = {}  # map descriptor uid to file handle of tiff file
@@ -258,12 +263,14 @@ class Serializer(event_model.DocumentRouter):
         # replace numpy objects with python ones to ensure json compatibility
         sanitized_doc = event_model.sanitize_doc(doc)
         # Add the doc to self._meta
-        self._meta['metadata']['descriptors'][stream_name] = sanitized_doc
+        self._meta['metadata']['descriptors'][stream_name]\
+            [sanitized_doc['uid']] = sanitized_doc
         # initialize some items in self._meta for use by event_page later
         self._meta['streams'][stream_name]['seq_num'] = []
         self._meta['streams'][stream_name]['time'] = []
         self._meta['streams'][stream_name]['timestamps'] = {}
         self._meta['streams'][stream_name]['uid'] = []
+        self._meta['streams'][stream_name]['descriptor'] = []
         # open the file handle to write the event_page data to later
         f = self.manager.open('stream_data', filename, 'xb')
         # use the file handle to create the tiff file writing object
@@ -316,6 +323,9 @@ class Serializer(event_model.DocumentRouter):
         self._meta['streams'][stream_name]['seq_num'].extend(doc['seq_num'])
         self._meta['streams'][stream_name]['time'].extend(doc['time'])
         self._meta['streams'][stream_name]['uid'].extend(doc['uid'])
+        for i  in numpy.arange(len(doc['uid'])):
+            self._meta['streams'][stream_name]['descriptor'].append(
+                doc['descriptor'])
 
         # return the event_page document
         return doc
