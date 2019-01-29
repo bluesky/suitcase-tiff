@@ -32,8 +32,9 @@ def export(gen, directory, file_prefix='{uid}-', **kwargs):
     """
     Export a stream of documents to TIFF stack(s) and one JSON file.
 
-    This creates one file named ``<filepath>_meta.json`` and a file named
-    ``<filepath>_{stream_name}.tiff`` for every Event stream.
+    This creates one file named ``<directory>/<file_prefix>meta.json`` and a
+    file named ``<directory>/<file_prefix>{stream_name}.tiff`` for every Event
+    stream.
 
     The structure of the JSON is::
 
@@ -72,7 +73,7 @@ def export(gen, directory, file_prefix='{uid}-', **kwargs):
         The first part of the filename of the generated output files. This
         string may include templates as in ``{proposal_id}-{sample_name}-``,
         which are populated from the RunStart document. The default value is
-        ``{uid}=`` which is guaranteed to be present and unique. A more
+        ``{uid}-`` which is guaranteed to be present and unique. A more
         descriptive value depends on the application and is therefore left to
         the user.
 
@@ -117,8 +118,9 @@ class Serializer(event_model.DocumentRouter):
     """
     Serialize a stream of documents to TIFF stack(s) and one JSON file.
 
-    This creates one file named ``<filepath>_meta.json`` and a file named
-    ``<filepath>_{stream_name}.tiff`` for every Event stream.
+    This creates one file named ``<directory>/<file_prefix>meta.json`` and a
+    file named ``<directory>/<file_prefix>{stream_name}.tiff`` for every Event
+    stream.
 
     The structure of the JSON is::
 

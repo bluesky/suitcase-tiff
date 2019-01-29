@@ -10,7 +10,7 @@ from . import export
 
 
 def export_documents(export, collector):
-    '''exports the data, then reloads it testing.
+    '''exports the data, then reloads it for testing.
 
     Parameters
     ----------
