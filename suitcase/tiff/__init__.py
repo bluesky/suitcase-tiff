@@ -6,7 +6,7 @@
 # functions.
 from collections import defaultdict
 from pathlib import Path
-import tifffile
+from tifffile import TiffWriter
 import event_model
 import numpy
 import suitcase.utils
@@ -16,7 +16,7 @@ __version__ = get_versions()['version']
 del get_versions
 
 
-def export(gen, directory, file_prefix='{uid}-', **kwargs):
+def export(gen, directory, file_prefix='{uid}-', stack_images=True, **kwargs):
     """
     Export a stream of documents to TIFF stack(s).
 
@@ -38,7 +38,7 @@ def export(gen, directory, file_prefix='{uid}-', **kwargs):
     Parameters
     ----------
     gen : generator
-        xpected to yield ``(name, document)`` pairs
+        expected to yield ``(name, document)`` pairs
 
     directory : string, Path or Manager.
         For basic uses, this should be the path to the output directory given
@@ -59,6 +59,12 @@ def export(gen, directory, file_prefix='{uid}-', **kwargs):
         ``{uid}-`` which is guaranteed to be present and unique. A more
         descriptive value depends on the application and is therefore left to
         the user.
+
+    stack_images : Boolean
+        This indicates if we want one image per file (`stack_images` = `False`)
+        or many images per file (`stack_images` = `True`). If using
+        `stack_images` = `False` then an additional image number is added to
+        the file name.
 
     **kwargs : kwargs
         kwargs to be passed to ``tifffile.TiffWriter.save``.
@@ -87,7 +93,8 @@ def export(gen, directory, file_prefix='{uid}-', **kwargs):
 
     >>> export(gen, '/path/to/my_usb_stick')
     """
-    serializer = Serializer(directory, file_prefix, **kwargs)
+    serializer = Serializer(directory, file_prefix,
+                            stack_images=stack_images, **kwargs)
     try:
         for item in gen:
             serializer(*item)
@@ -119,9 +126,6 @@ class Serializer(event_model.DocumentRouter):
 
     Parameters
     ----------
-    gen : generator
-        xpected to yield ``(name, document)`` pairs
-
     directory : string, Path or Manager.
         For basic uses, this should be the path to the output directory given
         as a string or Path object. Use an empty string ``''`` to place files
@@ -142,10 +146,17 @@ class Serializer(event_model.DocumentRouter):
         descriptive value depends on the application and is therefore left to
         the user.
 
+    stack_images : Boolean
+        This indicates if we want one image per file (`stack_images` = `False`)
+        or many images per file (`stack_images` = `True`). If using
+        `stack_images` = `False` then an additional image number is added to
+        the file name.
+
     **kwargs : kwargs
         kwargs to be passed to ``tifffile.TiffWriter.save``.
     """
-    def __init__(self, directory, file_prefix='{uid}-', **kwargs):
+    def __init__(self, directory, file_prefix='{uid}-', stack_images=True,
+                 **kwargs):
 
         if isinstance(directory, (str, Path)):
             self.manager = suitcase.utils.MultiFileManager(directory)
@@ -153,13 +164,15 @@ class Serializer(event_model.DocumentRouter):
             self.manager = directory
 
         self.artifacts = self.manager._artifacts
-        self._stream_names = {}  # maps stream_names to each descriptor uids
+        self._streamnames = defaultdict(dict)  # stream_names to desc  uids
         self._files = defaultdict(dict)  # maps stream_name to field/file dicts
         self._filenames = {}  # map stream_name to file names of tiff files
         self._file_prefix = file_prefix
         self._templated_file_prefix = ''
         self._kwargs = kwargs
         self._start_found = False
+        self._stack_images = stack_images
+        self._counter = defaultdict(dict)  # map stream_name to field/# dict
 
     def start(self, doc):
         '''Extracts `start` document information for formatting file_prefix.
@@ -184,7 +197,6 @@ class Serializer(event_model.DocumentRouter):
         # format self._file_prefix
         self._templated_file_prefix = self._file_prefix.format(**doc)
 
-        # return the start document
         return doc
 
     def descriptor(self, doc):
@@ -199,10 +211,9 @@ class Serializer(event_model.DocumentRouter):
             EventDescriptor document
         '''
         # extract some useful info from the doc
-        stream_name = doc.get('name')
-        self._stream_names[doc['uid']] = stream_name
+        streamname = doc.get('name')
+        self._streamnames[doc['uid']] = streamname
 
-        # return the descriptor doc
         return doc
 
     def event_page(self, doc):
@@ -230,22 +241,37 @@ class Serializer(event_model.DocumentRouter):
             EventPage document
         '''
         event_model.verify_filled(doc)
-        stream_name = self._stream_names[doc['descriptor']]
+        streamname = self._streamnames[doc['descriptor']]
         for field in doc['data']:
             for img in doc['data'][field]:
                 # check that the data is 2D, if not ignore it
                 if numpy.asarray(img).ndim == 2:
-                    # create a file for this stream and field if none exists
-                    if not self._files.get(stream_name, {}).get(field):
-                        filename = f'{self._templated_file_prefix}' +\
-                            f'{stream_name}-{field}.tiff'
+                    if self._stack_images:
+                        # create a file for this stream and field if required
+                        if not self._files.get(streamname, {}).get(field):
+                            filename = f'{self._templated_file_prefix}'
+                            filename += f'{streamname}-{field}.tiff'
+                            f = self.manager.open('stream_data', filename,
+                                                  'xb')
+                            self._files[streamname][field] = TiffWriter(
+                                f, bigtiff=True)
+                        # append the image to the file
+                        self._files[streamname][field].save(img,
+                                                            *self._kwargs)
+                    else:
+                        if not (self._counter.get(streamname, {}).get(field) or
+                                self._counter.get(streamname, {}).get(field)
+                                == 0):
+                            self._counter[streamname][field] = 0
+                        else:
+                            self._counter[streamname][field] += 1
+                        num = self._counter[streamname][field]
+                        filename = f'{self._templated_file_prefix}'
+                        filename += f'{streamname}-{field}-{num}.tiff'
                         f = self.manager.open('stream_data', filename, 'xb')
-                        self._files[stream_name][field] = tifffile.TiffWriter(
-                            f, bigtiff=True)
-                    # append the image to the file
-                    self._files[stream_name][field].save(img, *self._kwargs)
-
-        # return the event_page document
+                        tw = TiffWriter(f, bigtiff=True)
+                        self._files[streamname][field+f'-{num}'] = tw
+                        tw.save(img, *self._kwargs)
         return doc
 
     def close(self):

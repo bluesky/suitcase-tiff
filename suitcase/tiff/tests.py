@@ -13,20 +13,25 @@ def expected():
 
     return expected_array
 
+@pytest.fixture(params=[True, False], scope='function')
+def stack_images(request):
+    return request.param
 
-def test_simple_plan(events_data, expected):
+
+def test_simple_plan(events_data, expected, stack_images):
     ''' runs a test using a simple count plan with num=5
     '''
-    run_plan_test(simple_plan, events_data, expected)
+    run_plan_test(simple_plan, events_data, expected, stack_images)
 
 
-def test_multi_stream_one_descriptor_plan(events_data, expected):
+def test_multi_stream_one_descriptor_plan(events_data, expected, stack_images):
     ''' runs a test using a simple count plan with num=5
     '''
-    run_plan_test(multi_stream_one_descriptor_plan, events_data, expected)
+    run_plan_test(multi_stream_one_descriptor_plan, events_data, expected,
+                  stack_images)
 
 
-def run_plan_test(plan, events_data, expected):
+def run_plan_test(plan, events_data, expected, stack_images):
     ''' runs a test using the plan that is passed through to it
 
     ..note::
@@ -39,7 +44,8 @@ def run_plan_test(plan, events_data, expected):
 
     collector = events_data(simple_plan)
     directory = tempfile.mkdtemp()
-    artifacts = export(collector, directory, file_prefix='')
+    artifacts = export(collector, directory, file_prefix='',
+                       stack_images=stack_images)
 
     for filename in artifacts['stream_data']:
         # the following is required to convert from PosixPath to string
