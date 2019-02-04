@@ -245,8 +245,8 @@ class Serializer(event_model.DocumentRouter):
                     if self._stack_images:
                         # create a file for this stream and field if required
                         if not self._files.get(streamname, {}).get(field):
-                            filename = f'{self._templated_file_prefix}'
-                            filename += f'{streamname}-{field}.tiff'
+                            filename = (f'{self._templated_file_prefix}'
+                                        f'{streamname}-{field}.tiff')
                             f = self.manager.open('stream_data', filename,
                                                   'xb')
                             self._files[streamname][field] = TiffWriter(
@@ -262,8 +262,8 @@ class Serializer(event_model.DocumentRouter):
                         else:
                             self._counter[streamname][field] += 1
                         num = self._counter[streamname][field]
-                        filename = f'{self._templated_file_prefix}'
-                        filename += f'{streamname}-{field}-{num}.tiff'
+                        filename = (f'{self._templated_file_prefix}'
+                                    f'{streamname}-{field}-{num}.tiff')
                         f = self.manager.open('stream_data', filename, 'xb')
                         tw = TiffWriter(f, bigtiff=True)
                         self._files[streamname][field+f'-{num}'] = tw
