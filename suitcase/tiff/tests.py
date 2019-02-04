@@ -5,41 +5,39 @@ import pytest
 from suitcase.utils.conftest import (simple_plan,
                                      multi_stream_one_descriptor_plan,
                                      one_stream_multi_descriptors_plan)
-import tempfile
 import tifffile
 
-@pytest.fixture()
-def expected():
-    expected_array = numpy.ones((10, 10))
+expected = numpy.ones((10, 10))
 
-    return expected_array
 
 @pytest.fixture(params=[True, False], scope='function')
 def stack_images(request):
     return request.param
 
 
-def test_simple_plan(events_data, expected, stack_images):
+def test_simple_plan(tmp_path, events_data, stack_images):
+
     ''' runs a test using a simple count plan with num=5
     '''
-    run_plan_test(simple_plan, events_data, expected, stack_images)
+    run_plan_test(simple_plan, tmp_path, events_data, stack_images)
 
 
-def test_multi_stream_one_descriptor_plan(events_data, expected, stack_images):
+def test_multi_stream_one_descriptor_plan(tmp_path, events_data, stack_images):
     ''' runs a test using a simple count plan with num=5
     '''
-    run_plan_test(multi_stream_one_descriptor_plan, events_data, expected,
+    run_plan_test(multi_stream_one_descriptor_plan, tmp_path, events_data,
                   stack_images)
 
 
-def test_one_stream_multi_descriptors_plan(events_data, expected, stack_images):
+def test_one_stream_multi_descriptors_plan(tmp_path, events_data,
+                                           stack_images):
     ''' runs a test using a simple count plan with num=5
     '''
-    run_plan_test(one_stream_multi_descriptors_plan, events_data, expected,
+    run_plan_test(one_stream_multi_descriptors_plan, tmp_path, events_data,
                   stack_images)
 
 
-def run_plan_test(plan, events_data, expected, stack_images):
+def run_plan_test(plan, tmp_path, events_data, stack_images):
     ''' runs a test using the plan that is passed through to it
 
     ..note::
@@ -51,15 +49,11 @@ def run_plan_test(plan, events_data, expected, stack_images):
     '''
 
     collector = events_data(simple_plan)
-    directory = tempfile.mkdtemp()
-    artifacts = export(collector, directory, file_prefix='',
+    artifacts = export(collector, tmp_path, file_prefix='',
                        stack_images=stack_images)
 
     for filename in artifacts['stream_data']:
-        # the following is required to convert from PosixPath to string
-        if not type(filename) == str:
-             filename = str(filename)
-        actual = tifffile.imread(filename)
+        actual = tifffile.imread(str(filename))
         if len(actual.shape) == 3:
             for img in actual:
                 assert_array_equal(img, expected)
