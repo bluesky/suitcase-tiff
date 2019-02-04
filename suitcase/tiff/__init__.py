@@ -197,8 +197,6 @@ class Serializer(event_model.DocumentRouter):
         # format self._file_prefix
         self._templated_file_prefix = self._file_prefix.format(**doc)
 
-        return doc
-
     def descriptor(self, doc):
         '''Use `descriptor` doc to map stream_names to descriptor uid's.
 
@@ -213,8 +211,6 @@ class Serializer(event_model.DocumentRouter):
         # extract some useful info from the doc
         streamname = doc.get('name')
         self._streamnames[doc['uid']] = streamname
-
-        return doc
 
     def event_page(self, doc):
         '''Add event page document information to a ".tiff" file.
@@ -272,7 +268,6 @@ class Serializer(event_model.DocumentRouter):
                         tw = TiffWriter(f, bigtiff=True)
                         self._files[streamname][field+f'-{num}'] = tw
                         tw.save(img, *self._kwargs)
-        return doc
 
     def close(self):
         '''Close all of the files opened by this Serializer.

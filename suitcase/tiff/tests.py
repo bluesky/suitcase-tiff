@@ -3,7 +3,8 @@ import numpy
 from numpy.testing import assert_array_equal
 import pytest
 from suitcase.utils.conftest import (simple_plan,
-                                     multi_stream_one_descriptor_plan)
+                                     multi_stream_one_descriptor_plan,
+                                     one_stream_multi_descriptors_plan)
 import tempfile
 import tifffile
 
@@ -28,6 +29,13 @@ def test_multi_stream_one_descriptor_plan(events_data, expected, stack_images):
     ''' runs a test using a simple count plan with num=5
     '''
     run_plan_test(multi_stream_one_descriptor_plan, events_data, expected,
+                  stack_images)
+
+
+def test_one_stream_multi_descriptors_plan(events_data, expected, stack_images):
+    ''' runs a test using a simple count plan with num=5
+    '''
+    run_plan_test(one_stream_multi_descriptors_plan, events_data, expected,
                   stack_images)
 
 
