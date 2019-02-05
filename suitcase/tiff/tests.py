@@ -10,34 +10,11 @@ import tifffile
 expected = numpy.ones((10, 10))
 
 
-@pytest.fixture(params=[True, False], scope='function')
-def stack_images(request):
-    return request.param
-
-
-def test_simple_plan(tmp_path, events_data, stack_images):
-
-    ''' runs a test using a simple count plan with num=5
-    '''
-    run_plan_test(simple_plan, tmp_path, events_data, stack_images)
-
-
-def test_multi_stream_one_descriptor_plan(tmp_path, events_data, stack_images):
-    ''' runs a test using a simple count plan with num=5
-    '''
-    run_plan_test(multi_stream_one_descriptor_plan, tmp_path, events_data,
-                  stack_images)
-
-
-def test_one_stream_multi_descriptors_plan(tmp_path, events_data,
-                                           stack_images):
-    ''' runs a test using a simple count plan with num=5
-    '''
-    run_plan_test(one_stream_multi_descriptors_plan, tmp_path, events_data,
-                  stack_images)
-
-
-def run_plan_test(plan, tmp_path, events_data, stack_images):
+@pytest.mark.parametrize('plan', [simple_plan,
+                          multi_stream_one_descriptor_plan,
+                          one_stream_multi_descriptors_plan])
+@pytest.mark.parametrize('stack_images', [True, False])
+def test_run_plan(plan, tmp_path, events_data, stack_images):
     ''' runs a test using the plan that is passed through to it
 
     ..note::
@@ -48,7 +25,7 @@ def run_plan_test(plan, tmp_path, events_data, stack_images):
 
     '''
 
-    collector = events_data(simple_plan)
+    collector = events_data(plan)
     artifacts = export(collector, tmp_path, file_prefix='',
                        stack_images=stack_images)
 
