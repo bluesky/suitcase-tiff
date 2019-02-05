@@ -14,7 +14,7 @@ expected = numpy.ones((10, 10))
                           multi_stream_one_descriptor_plan,
                           one_stream_multi_descriptors_plan])
 @pytest.mark.parametrize('stack_images', [True, False])
-def test_run_plan(plan, tmp_path, events_data, stack_images):
+def test_export(plan, tmp_path, events_data, stack_images):
     ''' runs a test using the plan that is passed through to it
 
     ..note::
