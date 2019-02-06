@@ -9,7 +9,7 @@ coverage
 flake8
 # TEMPORARY UNTIL https://github.com/NSLS-II/ophyd/pull/682 IS RELEASED
 git+git://github.com/awalter-bnl/ophyd@add-configure
-pytest
+pytest >=3.9
 sphinx
 # These are dependencies of various sphinx extensions for documentation.
 ipython
