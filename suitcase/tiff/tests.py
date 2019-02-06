@@ -22,7 +22,7 @@ def test_export(tmp_path, example_data, stack_images):
 
     '''
 
-    collector = example_data
+    collector = example_data()
     artifacts = export(collector, tmp_path, file_prefix='',
                        stack_images=stack_images)
 
