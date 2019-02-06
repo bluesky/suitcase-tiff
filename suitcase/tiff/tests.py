@@ -2,9 +2,6 @@ from . import export
 import numpy
 from numpy.testing import assert_array_equal
 import pytest
-from suitcase.utils.tests.conftest import (simple_plan,
-                                     multi_stream_one_descriptor_plan,
-                                     one_stream_multi_descriptors_plan)
 import tifffile
 
 expected = numpy.ones((10, 10))
