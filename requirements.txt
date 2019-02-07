@@ -1,1 +1,4 @@
 # List required packages in this file, one per line.
+event-model >=1.8.0rc1
+suitcase-utils
+tifffile
