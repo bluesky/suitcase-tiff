@@ -277,6 +277,10 @@ class Serializer(event_model.DocumentRouter):
     def close(self):
         '''Close all of the files opened by this Serializer.
         '''
-        for stream in self._files:
-            for file in self._files[stream].values():
-                file.close()
+        # Close all the TiffWriter instances, which do some work on cleanup.
+        for tw_by_stream in self._tiff_writers.values():
+            for tw in tw_by_stream.values():
+                tw.close()
+        # Then let the manager (perhaps redundantly) close the underlying
+        # files.
+        self.manager.close()
