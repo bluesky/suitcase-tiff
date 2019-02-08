@@ -23,7 +23,7 @@ def test_export(tmp_path, example_data, stack_images):
     artifacts = export(collector, tmp_path, file_prefix='',
                        stack_images=stack_images)
 
-    for filename in artifacts['stream_data']:
+    for filename in artifacts.get('stream_data', []):
         actual = tifffile.imread(str(filename))
         if len(actual.shape) == 3:
             for img in actual:
