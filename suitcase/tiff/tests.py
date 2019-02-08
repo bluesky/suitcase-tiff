@@ -5,6 +5,7 @@ from numpy.testing import assert_array_equal
 import pytest
 import tifffile
 
+
 def create_expected(collector, stack_images):
     streamnames = {}
     events_dict = {}
@@ -34,15 +35,15 @@ def create_expected(collector, stack_images):
         for stream_name, event_list in events_dict.items():
             expected_dict = {}
             if not stack_images:
-                expected_dict[stream_name] = numpy.ones((10,10))
-                expected_dict['baseline'] = numpy.ones((10,10))
+                expected_dict[stream_name] = numpy.ones((10, 10))
+                expected_dict['baseline'] = numpy.ones((10, 10))
             elif len(event_list) == 1:
-                expected_dict[stream_name] = numpy.ones((10,10))
-                expected_dict['baseline'] = numpy.ones((2,10,10))
+                expected_dict[stream_name] = numpy.ones((10, 10))
+                expected_dict['baseline'] = numpy.ones((2, 10, 10))
             else:
                 expected_dict[stream_name] = numpy.ones(
-                    (len(event_list),10,10))
-                expected_dict['baseline'] = numpy.ones((3,10,10))
+                    (len(event_list), 10, 10))
+                expected_dict['baseline'] = numpy.ones((3, 10, 10))
 
     return expected_dict
 
@@ -63,7 +64,6 @@ def test_export(tmp_path, example_data, stack_images):
     artifacts = export(collector, tmp_path, file_prefix='',
                        stack_images=stack_images)
     expected = create_expected(collector, stack_images)
-
 
     for filename in artifacts.get('stream_data', []):
         actual = tifffile.imread(str(filename))
