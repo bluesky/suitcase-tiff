@@ -163,7 +163,6 @@ class Serializer(event_model.DocumentRouter):
         else:
             self.manager = directory
 
-        self.artifacts = self.manager._artifacts
         self._streamnames = defaultdict(dict)  # stream_names to desc  uids
         self._files = defaultdict(dict)  # maps stream_name to field/file dicts
         self._filenames = {}  # map stream_name to file names of tiff files
@@ -173,6 +172,12 @@ class Serializer(event_model.DocumentRouter):
         self._start_found = False
         self._stack_images = stack_images
         self._counter = defaultdict(dict)  # map stream_name to field/# dict
+
+    @property
+    def artifacts(self):
+        # The manager's artifacts attribute is itself a property, and we must
+        # access it a new each time to be sure to get the latest content.
+        return self.manager.artifacts
 
     def start(self, doc):
         '''Extracts `start` document information for formatting file_prefix.
