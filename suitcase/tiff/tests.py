@@ -2,6 +2,7 @@ from . import export
 import event_model
 import numpy
 from numpy.testing import assert_array_equal
+import os
 import pytest
 import tifffile
 
@@ -67,5 +68,5 @@ def test_export(tmp_path, example_data, stack_images):
 
     for filename in artifacts.get('stream_data', []):
         actual = tifffile.imread(str(filename))
-        streamname = str(filename).split('/')[-1].split('-')[0]
+        streamname = os.path.basename(filename).split('-')[0]
         assert_array_equal(actual, expected[streamname])
