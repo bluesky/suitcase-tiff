@@ -159,9 +159,9 @@ class Serializer(event_model.DocumentRouter):
                  **kwargs):
 
         if isinstance(directory, (str, Path)):
-            self.manager = suitcase.utils.MultiFileManager(directory)
+            self._manager = suitcase.utils.MultiFileManager(directory)
         else:
-            self.manager = directory
+            self._manager = directory
 
         self._streamnames = defaultdict(dict)  # stream_names to desc  uids
         # Map stream name to dict that maps field names to TiffWriter objects.
@@ -177,7 +177,7 @@ class Serializer(event_model.DocumentRouter):
     def artifacts(self):
         # The manager's artifacts attribute is itself a property, and we must
         # access it a new each time to be sure to get the latest content.
-        return self.manager.artifacts
+        return self._manager.artifacts
 
     def start(self, doc):
         '''Extracts `start` document information for formatting file_prefix.
@@ -252,7 +252,7 @@ class Serializer(event_model.DocumentRouter):
                         if not self._tiff_writers.get(streamname, {}).get(field):
                             filename = (f'{self._templated_file_prefix}'
                                         f'{streamname}-{field}.tiff')
-                            file = self.manager.open(
+                            file = self._manager.open(
                                 'stream_data', filename, 'xb')
                             tw = TiffWriter(file, bigtiff=True)
                             self._tiff_writers[streamname][field] = tw
@@ -269,7 +269,7 @@ class Serializer(event_model.DocumentRouter):
                         num = self._counter[streamname][field]
                         filename = (f'{self._templated_file_prefix}'
                                     f'{streamname}-{field}-{num}.tiff')
-                        file = self.manager.open('stream_data', filename, 'xb')
+                        file = self._manager.open('stream_data', filename, 'xb')
                         tw = TiffWriter(file, bigtiff=True)
                         self._tiff_writers[streamname][field+f'-{num}'] = tw
                         tw.save(img, *self._kwargs)
@@ -283,4 +283,4 @@ class Serializer(event_model.DocumentRouter):
                 tw.close()
         # Then let the manager (perhaps redundantly) close the underlying
         # files.
-        self.manager.close()
+        self._manager.close()
