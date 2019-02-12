@@ -1,5 +1,5 @@
-from . import export
 import event_model
+from .. import export
 import numpy
 from numpy.testing import assert_array_equal
 import os
