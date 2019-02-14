@@ -6,6 +6,8 @@ flake8
 # TEMPORARY UNTIL https://github.com/NSLS-II/ophyd/pull/682 IS RELEASED
 git+git://github.com/awalter-bnl/ophyd@add-configure
 pytest >=3.9
+pytest_benchmark  # reported as missing by pytest
+asv  # reported as missing by pytest
 sphinx
 suitcase-utils[test_fixtures] >=0.1.0rc2
 # These are dependencies of various sphinx extensions for documentation.
