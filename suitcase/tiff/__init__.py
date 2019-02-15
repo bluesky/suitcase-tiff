@@ -93,13 +93,10 @@ def export(gen, directory, file_prefix='{uid}-', stack_images=True, **kwargs):
 
     >>> export(gen, '/path/to/my_usb_stick')
     """
-    serializer = Serializer(directory, file_prefix,
-                            stack_images=stack_images, **kwargs)
-    try:
+    with Serializer(directory, file_prefix,
+                    stack_images=stack_images, **kwargs) as serializer:
         for item in gen:
             serializer(*item)
-    finally:
-        serializer.close()
 
     return serializer.artifacts
 
@@ -285,3 +282,9 @@ class Serializer(event_model.DocumentRouter):
         # Then let the manager (perhaps redundantly) close the underlying
         # files.
         self._manager.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exception_details):
+        self.close()
