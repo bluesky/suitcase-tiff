@@ -258,7 +258,7 @@ class Serializer(event_model.DocumentRouter):
                             self._tiff_writers[streamname][field] = tw
                         # append the image to the file
                         tw = self._tiff_writers[streamname][field]
-                        tw.save(img, *self._kwargs)
+                        tw.save(numpy.asarray(img), *self._kwargs)
                     else:
                         if not (self._counter.get(streamname, {}).get(field) or
                                 self._counter.get(streamname, {}).get(field)
@@ -272,7 +272,7 @@ class Serializer(event_model.DocumentRouter):
                         file = self._manager.open('stream_data', filename, 'xb')
                         tw = TiffWriter(file, bigtiff=True)
                         self._tiff_writers[streamname][field+f'-{num}'] = tw
-                        tw.save(img, *self._kwargs)
+                        tw.save(numpy.asarray(img), *self._kwargs)
 
     def close(self):
         '''Close all of the files opened by this Serializer.
