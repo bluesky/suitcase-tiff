@@ -16,7 +16,8 @@ __version__ = get_versions()['version']
 del get_versions
 
 
-def export(gen, directory, file_prefix='{uid}-', stack_images=True, **kwargs):
+def export(gen, directory, file_prefix='{uid}-', stack_images=True,
+           bigtiff=False, byteorder=None, imagej=False, **kwargs):
     """
     Export a stream of documents to TIFF stack(s).
 
@@ -60,11 +61,20 @@ def export(gen, directory, file_prefix='{uid}-', stack_images=True, **kwargs):
         descriptive value depends on the application and is therefore left to
         the user.
 
-    stack_images : Boolean
+    stack_images : Boolean, optional
         This indicates if we want one image per file (`stack_images` = `False`)
         or many images per file (`stack_images` = `True`). If using
         `stack_images` = `False` then an additional image number is added to
         the file name.
+
+    bigtiff : boolean, optional
+        Passed into ``tifffile.TiffWriter``. Default False.
+
+    byteorder : string or None, optional
+        Passed into ``tifffile.TiffWriter``. Default None.
+
+    imagej: boolean, optional
+        Passed into ``tifffile.TiffWriter``. Default False.
 
     **kwargs : kwargs
         kwargs to be passed to ``tifffile.TiffWriter.save``.
@@ -94,7 +104,11 @@ def export(gen, directory, file_prefix='{uid}-', stack_images=True, **kwargs):
     >>> export(gen, '/path/to/my_usb_stick')
     """
     with Serializer(directory, file_prefix,
-                    stack_images=stack_images, **kwargs) as serializer:
+                    stack_images=stack_images,
+                    bigtiff=bigtiff,
+                    byteorder=byteorder,
+                    imagej=imagej,
+                    **kwargs) as serializer:
         for item in gen:
             serializer(*item)
 
@@ -149,11 +163,20 @@ class Serializer(event_model.DocumentRouter):
         `stack_images` = `False` then an additional image number is added to
         the file name.
 
+    bigtiff : boolean, optional
+        Passed into ``tifffile.TiffWriter``. Default False.
+
+    byteorder : string or None, optional
+        Passed into ``tifffile.TiffWriter``. Default None.
+
+    imagej: boolean, optional
+        Passed into ``tifffile.TiffWriter``. Default False.
+
     **kwargs : kwargs
         kwargs to be passed to ``tifffile.TiffWriter.save``.
     """
     def __init__(self, directory, file_prefix='{uid}-', stack_images=True,
-                 **kwargs):
+                 bigtiff=False, byteorder=None, imagej=False, **kwargs):
 
         if isinstance(directory, (str, Path)):
             self._manager = suitcase.utils.MultiFileManager(directory)
@@ -165,7 +188,9 @@ class Serializer(event_model.DocumentRouter):
         self._tiff_writers = defaultdict(dict)
         self._file_prefix = file_prefix
         self._templated_file_prefix = ''
-        self._kwargs = kwargs
+        self._init_kwargs = {'bigtiff': bigtiff, 'byteorder': byteorder,
+                             'imagej': imagej}  # passed to TiffWriter()
+        self._kwargs = kwargs  # passed to TiffWriter.save()
         self._start_found = False
         self._stack_images = stack_images
         self._counter = defaultdict(dict)  # map stream_name to field/# dict
@@ -252,7 +277,7 @@ class Serializer(event_model.DocumentRouter):
                                         f'{streamname}-{field}.tiff')
                             file = self._manager.open(
                                 'stream_data', filename, 'xb')
-                            tw = TiffWriter(file, bigtiff=True)
+                            tw = TiffWriter(file, **self._init_kwargs)
                             self._tiff_writers[streamname][field] = tw
                         # append the image to the file
                         tw = self._tiff_writers[streamname][field]
@@ -268,7 +293,7 @@ class Serializer(event_model.DocumentRouter):
                         filename = (f'{self._templated_file_prefix}'
                                     f'{streamname}-{field}-{num}.tiff')
                         file = self._manager.open('stream_data', filename, 'xb')
-                        tw = TiffWriter(file, bigtiff=True)
+                        tw = TiffWriter(file, **self._init_kwargs)
                         self._tiff_writers[streamname][field+f'-{num}'] = tw
                         tw.save(img_asarray, *self._kwargs)
 
