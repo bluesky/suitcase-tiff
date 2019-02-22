@@ -67,8 +67,8 @@ def export(gen, directory, file_prefix='{uid}-', stack_images=True,
         `stack_images` = `False` then an additional image number is added to
         the file name.
 
-    bigtiff : False, optional
-        Passed into ``tifffile.TiffWriter``. Default False
+    bigtiff : boolean, optional
+        Passed into ``tifffile.TiffWriter``. Default False.
 
     byteorder : string or None, optional
         Passed into ``tifffile.TiffWriter``. Default None.
@@ -163,8 +163,8 @@ class Serializer(event_model.DocumentRouter):
         `stack_images` = `False` then an additional image number is added to
         the file name.
 
-    bigtiff : False, optional
-        Passed into ``tifffile.TiffWriter``. Default False
+    bigtiff : boolean, optional
+        Passed into ``tifffile.TiffWriter``. Default False.
 
     byteorder : string or None, optional
         Passed into ``tifffile.TiffWriter``. Default None.
