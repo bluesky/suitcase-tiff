@@ -37,7 +37,8 @@ setup(
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     long_description=readme,
-    packages=['suitcase.tiff', 'suitcase.tiff.tests'],
+    packages=['suitcase.tiff_series', 'suitcase.tiff_series.tests',
+              'suitcase.tiff_stack', 'suitcase.tiff_stack.tests'],
     entry_points={
         'console_scripts': [
             # 'some.module:some_function',
@@ -45,7 +46,12 @@ setup(
         },
     include_package_data=True,
     package_data={
-        'suitcase.tiff': [
+        'suitcase.tiff_series': [
+            # When adding files here, remember to update MANIFEST.in as well,
+            # or else they will not be included in the distribution on PyPI!
+            # 'path/to/data_file',
+            ],
+        'suitcase.tiff_stack': [
             # When adding files here, remember to update MANIFEST.in as well,
             # or else they will not be included in the distribution on PyPI!
             # 'path/to/data_file',

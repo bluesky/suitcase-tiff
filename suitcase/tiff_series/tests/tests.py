@@ -3,7 +3,6 @@ from .. import export
 import numpy
 from numpy.testing import assert_array_equal
 import os
-import pytest
 import tifffile
 
 
@@ -49,8 +48,7 @@ def create_expected(collector, stack_images):
     return expected_dict
 
 
-@pytest.mark.parametrize('stack_images', [True, False])
-def test_export(tmp_path, example_data, stack_images):
+def test_export(tmp_path, example_data):
     ''' runs a test using the plan that is passed through to it
 
     ..note::
@@ -62,9 +60,8 @@ def test_export(tmp_path, example_data, stack_images):
     '''
 
     collector = example_data()
-    artifacts = export(collector, tmp_path, file_prefix='',
-                       stack_images=stack_images)
-    expected = create_expected(collector, stack_images)
+    artifacts = export(collector, tmp_path, file_prefix='')
+    expected = create_expected(collector, stack_images=False)
 
     for filename in artifacts.get('stream_data', []):
         actual = tifffile.imread(str(filename))
