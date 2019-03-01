@@ -260,9 +260,7 @@ class Serializer(event_model.DocumentRouter):
                     self._templated_file_prefix = self._file_prefix.format(
                         start=self._start, descriptor=descriptor,
                         event_page=doc)
-                    if not (self._counter.get(streamname, {}).get(field) or
-                            self._counter.get(streamname, {}).get(field)
-                            == 0):
+                    if not self._counter.get(streamname, {}).get(field):
                         self._counter[streamname][field] = 0
                     else:
                         self._counter[streamname][field] += 1
