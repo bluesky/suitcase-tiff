@@ -16,7 +16,7 @@ __version__ = get_versions()['version']
 del get_versions
 
 
-def export(gen, directory, file_prefix='{uid}-', bigtiff=False, byteorder=None,
+def export(gen, directory, file_prefix='{start.uid}-', bigtiff=False, byteorder=None,
            imagej=False, **kwargs):
     """
     Export a stream of documents to a series of TIFF files.
@@ -58,8 +58,8 @@ def export(gen, directory, file_prefix='{uid}-', bigtiff=False, byteorder=None,
         string may include templates as in
         ``{start.proposal_id}-{start.sample_name}-``, which are populated from
         the RunStart(start), descriptor(descriptor) event_page(event) document.
-        The default value is ``{uid}-`` which is guaranteed to be present and
-        unique. A more descriptive value depends on the application and is
+        The default value is ``{start.uid}-`` which is guaranteed to be present 
+        and unique. A more descriptive value depends on the application and is
         therefore left to the user.
 
     bigtiff : boolean, optional
