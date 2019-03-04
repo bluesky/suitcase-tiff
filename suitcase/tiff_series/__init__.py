@@ -58,7 +58,7 @@ def export(gen, directory, file_prefix='{start.uid}-', bigtiff=False,
         string may include templates as in
         ``{start.proposal_id}-{start.sample_name}-``, which are populated from
         the RunStart(start), descriptor(descriptor) event_page(event) document.
-        The default value is ``{start.uid}-`` which is guaranteed to be present 
+        The default value is ``{start.uid}-`` which is guaranteed to be present
         and unique. A more descriptive value depends on the application and is
         therefore left to the user.
 
