@@ -1,4 +1,4 @@
 [run]
 branch = true
 include = suitcase/tiff_series/*,suitcase/tiff_stack/*
-omit = suitcase/tiff_series/_version.py,suitcase.tiff_stack/_version.py
+omit = suitcase/tiff_series/_version.py,suitcase/tiff_stack/_version.py
