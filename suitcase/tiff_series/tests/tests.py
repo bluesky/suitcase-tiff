@@ -40,7 +40,7 @@ def create_expected(collector, stack_images):
                 expected_dict['baseline'] = numpy.ones((10, 10))
             elif len(event_list) == 1:
                 expected_dict[stream_name] = numpy.ones((10, 10))
-                expected_dict['baseline'] = numpy.ones((2,10, 10))
+                expected_dict['baseline'] = numpy.ones((2, 10, 10))
             else:
                 expected_dict[stream_name] = numpy.ones(
                     (len(event_list), 10, 10))
@@ -53,7 +53,6 @@ def create_expected(collector, stack_images):
                 scope='function')
 def test_path_formatting():
     ...
-
 
 
 def test_export(tmp_path, example_data):
