@@ -57,7 +57,7 @@ def export(gen, directory, file_prefix='{uid}-', bigtiff=False, byteorder=None,
         The first part of the filename of the generated output files. This
         string may include templates as in
         ``{start.proposal_id}-{start.sample_name}-``, which are populated from
-        the RunStart(start), descriptor(descriptor) event_page(event) document.
+        the RunStart(start), descriptor(descriptor) event(event) document.
         The default value is ``{uid}-`` which is guaranteed to be present and
         unique. A more descriptive value depends on the application and is
         therefore left to the user.
@@ -147,7 +147,7 @@ class Serializer(event_model.DocumentRouter):
         The first part of the filename of the generated output files. This
         string may include templates as in
         ``{start.proposal_id}-{start.sample_name}-``, which are populated from
-        the RunStart(start), descriptor(descriptor) event_page(event) document.
+        the RunStart(start), descriptor(descriptor) event(event) document.
         The default value is ``{uid}-`` which is guaranteed to be present and
         unique. A more descriptive value depends on the application and is
         therefore left to the user.
@@ -225,9 +225,22 @@ class Serializer(event_model.DocumentRouter):
         self._descriptors[doc['uid']] = doc
 
     def event_page(self, doc):
-        '''Add event page document information to a ".tiff" file.
+        '''Converts an 'event_page' doc to 'event' docs for processing.
 
-        This method adds event_page document information to a ".tiff" file,
+        Parameters:
+        -----------
+        doc : dict
+            Event_Page document
+        '''
+
+        events = event_model.unpack_event_page(doc)
+        for event_doc in events:
+            self.event(event_doc)
+
+    def event(self, doc):
+        '''Add event document information to a ".tiff" file.
+
+        This method adds event document information to a ".tiff" file,
         creating it if nesecary.
 
         .. warning::
@@ -239,40 +252,41 @@ class Serializer(event_model.DocumentRouter):
             The data in Events might be structured as an Event, an EventPage,
             or a "bulk event" (deprecated). The DocumentRouter base class takes
             care of first transforming the other repsentations into an
-            EventPage and then routing them through here, so no further action
-            is required in this class. We can assume we will always receive an
-            EventPage.
+            EventPage and then routing them through here, as we require Event
+            documents _in this case_ we overwrite both the `event` method and
+            the `event_page` method so we can assume we will always receive an
+            Event.
 
         Parameters:
         -----------
         doc : dict
-            EventPage document
+            Event document
         '''
-        event_model.verify_filled(doc)
+        event_model.verify_filled(event_model.pack_event_page(*[doc]))
         descriptor = self._descriptors[doc['descriptor']]
         streamname = descriptor.get('name')
         for field in doc['data']:
-            for img in doc['data'][field]:
-                # check that the data is 2D, if not ignore it
-                img_asarray = numpy.asarray(img)
-                if img_asarray.ndim == 2:
-                    # template the file name.
-                    self._templated_file_prefix = self._file_prefix.format(
-                        start=self._start, descriptor=descriptor,
-                        event_page=doc)
-                    if not (self._counter.get(streamname, {}).get(field) or
-                            self._counter.get(streamname, {}).get(field)
-                            == 0):
-                        self._counter[streamname][field] = 0
-                    else:
-                        self._counter[streamname][field] += 1
-                    num = self._counter[streamname][field]
-                    filename = (f'{self._templated_file_prefix}'
-                                f'{streamname}-{field}-{num}.tiff')
-                    file = self._manager.open('stream_data', filename, 'xb')
-                    tw = TiffWriter(file, **self._init_kwargs)
-                    self._tiff_writers[streamname][field+f'-{num}'] = tw
-                    tw.save(img_asarray, *self._kwargs)
+            img = doc['data'][field]
+            # check that the data is 2D, if not ignore it
+            img_asarray = numpy.asarray(img)
+            if img_asarray.ndim == 2:
+                # template the file name.
+                self._templated_file_prefix = self._file_prefix.format(
+                    start=self._start, descriptor=descriptor,
+                    event=doc)
+                if not (self._counter.get(streamname, {}).get(field) or
+                        self._counter.get(streamname, {}).get(field)
+                        == 0):
+                    self._counter[streamname][field] = 0
+                else:
+                    self._counter[streamname][field] += 1
+                num = self._counter[streamname][field]
+                filename = (f'{self._templated_file_prefix}'
+                            f'{streamname}-{field}-{num}.tiff')
+                file = self._manager.open('stream_data', filename, 'xb')
+                tw = TiffWriter(file, **self._init_kwargs)
+                self._tiff_writers[streamname][field+f'-{num}'] = tw
+                tw.save(img_asarray, *self._kwargs)
 
     def close(self):
         '''Close all of the files opened by this Serializer.
