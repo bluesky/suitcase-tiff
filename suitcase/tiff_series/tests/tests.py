@@ -71,7 +71,7 @@ def test_path_formatting(file_prefix, example_data, tmp_path):
                         start=start, descriptor=descriptors[doc['descriptor']],
                         event=event)
                     events_list.append(templated_file_prefix.partition('-')[0])
-            elif name == 'bulk_event':
+            elif name == 'bulk_events':
                 for key, events in doc.items():
                     for event in events:
                         templated_file_prefix = file_prefix.format(
