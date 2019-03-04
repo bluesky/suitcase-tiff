@@ -4,12 +4,10 @@
 # NotImplementError, so that a client importing this library can immediately
 # know which portions of the suitcase API it supports without calling any
 # functions.
-from collections import defaultdict
-from pathlib import Path
 from tifffile import TiffWriter
 import event_model
 import numpy
-import suitcase.utils
+from suitcase import tiff_stack
 from ._version import get_versions
 
 __version__ = get_versions()['version']
@@ -109,7 +107,7 @@ def export(gen, directory, file_prefix='{start.uid}-', bigtiff=False,
     return serializer.artifacts
 
 
-class Serializer(event_model.DocumentRouter):
+class Serializer(tiff_stack.Serializer):
     """
     Serialize a stream of documents to a series of TIFF files.
 
@@ -164,66 +162,6 @@ class Serializer(event_model.DocumentRouter):
     **kwargs : kwargs
         kwargs to be passed to ``tifffile.TiffWriter.save``.
     """
-    def __init__(self, directory, file_prefix='{uid}-', bigtiff=False,
-                 byteorder=None, imagej=False, **kwargs):
-
-        if isinstance(directory, (str, Path)):
-            self._manager = suitcase.utils.MultiFileManager(directory)
-        else:
-            self._manager = directory
-
-        # Map stream name to dict that maps field names to TiffWriter objects.
-        self._tiff_writers = defaultdict(dict)
-
-        self._file_prefix = file_prefix
-        self._templated_file_prefix = ''
-        self._init_kwargs = {'bigtiff': bigtiff, 'byteorder': byteorder,
-                             'imagej': imagej}  # passed to TiffWriter()
-        self._kwargs = kwargs  # passed to TiffWriter.save()
-        self._start = {}  # holds the start document information
-        self._descriptors = {}  # maps the descriptor uids to descriptor docs.
-        self._counter = defaultdict(dict)  # map stream_name to field/# dict
-
-    @property
-    def artifacts(self):
-        # The manager's artifacts attribute is itself a property, and we must
-        # access it a new each time to be sure to get the latest content.
-        return self._manager.artifacts
-
-    def start(self, doc):
-        '''Extracts `start` document information for formatting file_prefix.
-
-        This method checks that only one `start` document is seen and formats
-        `file_prefix` based on the contents of the `start` document.
-
-        Parameters:
-        -----------
-        doc : dict
-            RunStart document
-        '''
-
-        # raise an error if this is the second `start` document seen.
-        if self._start:
-            raise RuntimeError(
-                "The serializer in suitcase.tiff expects documents from one "
-                "run only. Two `start` documents where sent to it")
-        else:
-            self._start = doc  # record the start doc for later use
-
-    def descriptor(self, doc):
-        '''Use `descriptor` doc to map stream_names to descriptor uid's.
-
-        This method usess the descriptor document information to map the
-        stream_names to descriptor uid's.
-
-        Parameters:
-        -----------
-        doc : dict
-            EventDescriptor document
-        '''
-        # record the doc for later use
-        self._descriptors[doc['uid']] = doc
-
     def event_page(self, doc):
         '''Converts an 'event_page' doc to 'event' docs for processing.
 
@@ -287,20 +225,3 @@ class Serializer(event_model.DocumentRouter):
                 tw = TiffWriter(file, **self._init_kwargs)
                 self._tiff_writers[streamname][field+f'-{num}'] = tw
                 tw.save(img_asarray, *self._kwargs)
-
-    def close(self):
-        '''Close all of the files opened by this Serializer.
-        '''
-        # Close all the TiffWriter instances, which do some work on cleanup.
-        for tw_by_stream in self._tiff_writers.values():
-            for tw in tw_by_stream.values():
-                tw.close()
-        # Then let the manager (perhaps redundantly) close the underlying
-        # files.
-        self._manager.close()
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exception_details):
-        self.close()
