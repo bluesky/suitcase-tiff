@@ -90,7 +90,8 @@ def test_path_formatting(file_prefix, example_data, tmp_path):
     events_list = _name_templator(collector, file_prefix)
 
     if artifacts:
-        for artifact, expected in zip(artifacts['stream_data'], events_list):
+        for artifact, expected in zip(sorted(artifacts['stream_data']),
+                                      sorted(events_list)):
             actual = str(artifact).split('/')[-1].partition('-')[0]
             assert actual == expected
 
