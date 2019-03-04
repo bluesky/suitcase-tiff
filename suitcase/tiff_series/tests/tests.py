@@ -49,10 +49,50 @@ def create_expected(collector, stack_images):
     return expected_dict
 
 
-@pytest.fixture(params=['test'],
-                scope='function')
-def test_path_formatting():
-    ...
+@pytest.mark.parametrize("file_prefix", ['test-', 'scan_{start[uid]}-',
+                                         'scan_{descriptor[uid]}-',
+                                         '{event[uid]}-'])
+def test_path_formatting(file_prefix, example_data, tmp_path):
+    collector = example_data()
+    artifacts = export(collector, tmp_path, file_prefix=file_prefix)
+    expected = file_prefix.partition('-')[0]
+
+    def _name_templator(collector, file_prefix):
+        events_list = []
+        descriptors = {}
+        for name, doc in collector:
+            if name == 'start':
+                start = doc
+            elif name == 'descriptor':
+                descriptors[doc['uid']] = doc
+            elif name == 'event_page':
+                for event in event_model.unpack_event_page(doc):
+                    templated_file_prefix = file_prefix.format(
+                        start=start, descriptor=descriptors[doc['descriptor']],
+                        event=event)
+                    events_list.append(templated_file_prefix.partition('-')[0])
+            elif name == 'bulk_event':
+                for key, events in doc.items():
+                    for event in events:
+                        templated_file_prefix = file_prefix.format(
+                            start=start,
+                            descriptor=descriptors[doc['descriptor']],
+                            event=event)
+                        events_list.append(
+                            templated_file_prefix.partition('-')[0])
+            elif name == 'event':
+                templated_file_prefix = file_prefix.format(
+                    start=start, descriptor=descriptors[doc['descriptor']],
+                    event=doc)
+                events_list.append(templated_file_prefix.partition('-')[0])
+        return events_list
+
+    events_list = _name_templator(collector, file_prefix)
+
+    if artifacts:
+        for artifact, expected in zip(artifacts['stream_data'], events_list):
+            actual = str(artifact).split('/')[-1].partition('-')[0]
+            assert actual == expected
 
 
 def test_export(tmp_path, example_data):
