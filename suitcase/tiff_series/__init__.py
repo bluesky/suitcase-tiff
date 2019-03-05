@@ -1,3 +1,4 @@
+from collections import defaultdict
 from tifffile import TiffWriter
 import event_model
 import numpy
@@ -160,6 +161,13 @@ class Serializer(tiff_stack.Serializer):
     **kwargs : kwargs
         kwargs to be passed to ``tifffile.TiffWriter.save``.
     """
+    def __init__(self, directory, file_prefix='{uid}-', bigtiff=False,
+                 byteorder=None, imagej=False, **kwargs):
+        super().__init__(directory, file_prefix, bigtiff,
+                         byteorder, imagej, **kwargs)
+        # maps stream name to dict that map field name to index (#)
+        self._counter = defaultdict(lambda: defaultdict(lambda: 0))
+
     def event_page(self, doc):
         '''Converts an 'event_page' doc to 'event' docs for processing.
 
@@ -210,12 +218,7 @@ class Serializer(tiff_stack.Serializer):
                 self._templated_file_prefix = self._file_prefix.format(
                     start=self._start, descriptor=descriptor,
                     event=doc)
-                if not (self._counter.get(streamname, {}).get(field) or
-                        self._counter.get(streamname, {}).get(field)
-                        == 0):
-                    self._counter[streamname][field] = 0
-                else:
-                    self._counter[streamname][field] += 1
+                self._counter[streamname][field] += 1
                 num = self._counter[streamname][field]
                 filename = (f'{self._templated_file_prefix}'
                             f'{streamname}-{field}-{num}.tiff')

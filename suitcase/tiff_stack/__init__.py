@@ -181,7 +181,6 @@ class Serializer(event_model.DocumentRouter):
         self._kwargs = kwargs  # passed to TiffWriter.save()
         self._start = {}  # holds the start document information
         self._descriptors = {}  # maps the descriptor uids to descriptor docs.
-        self._counter = defaultdict(dict)  # map stream_name to field/# dict
 
     @property
     def artifacts(self):
