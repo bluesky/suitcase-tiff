@@ -44,8 +44,8 @@ def export(gen, directory, file_prefix='{uid}-', bigtiff=False, byteorder=None,
         memory buffer, network socket, or other writable buffer. It should be
         an instance of ``suitcase.utils.MemoryBufferManager`` and
         ``suitcase.utils.MultiFileManager`` or any object implementing that
-        inferface. See the suitcase documentation (LINK ONCE WRITTEN) for
-        details.
+        interface. See the suitcase documentation
+        (http://nsls-ii.github.io/suitcase) for details.
 
     file_prefix : str, optional
         The first part of the filename of the generated output files. This
@@ -75,7 +75,7 @@ def export(gen, directory, file_prefix='{uid}-', bigtiff=False, byteorder=None,
     Examples
     --------
 
-    Generate files with unique-identifer names in the current directory.
+    Generate files with unique-identifier names in the current directory.
 
     >>> export(gen, '')
 
@@ -133,8 +133,8 @@ class Serializer(event_model.DocumentRouter):
         memory buffer, network socket, or other writable buffer. It should be
         an instance of ``suitcase.utils.MemoryBufferManager`` and
         ``suitcase.utils.MultiFileManager`` or any object implementing that
-        inferface. See the suitcase documentation (LINK ONCE WRITTEN) for
-        details.
+        interface. See the suitcase documentation
+        (http://nsls-ii.github.io/suitcase) for details.
 
     file_prefix : str, optional
         The first part of the filename of the generated output files. This
@@ -212,7 +212,7 @@ class Serializer(event_model.DocumentRouter):
     def descriptor(self, doc):
         '''Use `descriptor` doc to map stream_names to descriptor uid's.
 
-        This method usess the descriptor document information to map the
+        This method uses the descriptor document information to map the
         stream_names to descriptor uid's.
 
         Parameters:

@@ -42,17 +42,17 @@ def export(gen, directory, file_prefix='{start[uid]}-', bigtiff=False,
         memory buffer, network socket, or other writable buffer. It should be
         an instance of ``suitcase.utils.MemoryBufferManager`` and
         ``suitcase.utils.MultiFileManager`` or any object implementing that
-        inferface. See the suitcase documentation (LINK ONCE WRITTEN) for
-        details.
+        interface. See the suitcase documentation
+        (http://nsls-ii.github.io/suitcase) for details.
 
     file_prefix : str, optional
         The first part of the filename of the generated output files. This
         string may include templates as in
         ``{start[proposal_id]}-{start[sample_name]}-``, which are populated
-        from the RunStart(start), descriptor(descriptor) or event(event)
-        documents. The default value is ``{start[uid]}-`` which is guaranteed
-        to be present and unique. A more descriptive value depends on the
-        application and is therefore left to the user.
+        from the RunStart (start), EventDescriptor (descriptor) or Event
+        (event) documents. The default value is ``{start[uid]}-`` which is
+        guaranteed to be present and unique. A more descriptive value depends
+        on the application and is therefore left to the user.
 
     bigtiff : boolean, optional
         Passed into ``tifffile.TiffWriter``. Default False.
@@ -74,7 +74,7 @@ def export(gen, directory, file_prefix='{start[uid]}-', bigtiff=False,
     Examples
     --------
 
-    Generate files with unique-identifer names in the current directory.
+    Generate files with unique-identifier names in the current directory.
 
     >>> export(gen, '')
 
@@ -136,17 +136,17 @@ class Serializer(tiff_stack.Serializer):
         memory buffer, network socket, or other writable buffer. It should be
         an instance of ``suitcase.utils.MemoryBufferManager`` and
         ``suitcase.utils.MultiFileManager`` or any object implementing that
-        inferface. See the suitcase documentation (LINK ONCE WRITTEN) for
-        details.
+        interface. See the suitcase documentation
+        (http://nsls-ii.github.io/suitcase) for details.
 
     file_prefix : str, optional
         The first part of the filename of the generated output files. This
         string may include templates as in
         ``{start[proposal_id]}-{start[sample_name]}-``, which are populated
-        from the RunStart(start), descriptor(descriptor) or event(event)
-        documents. The default value is ``{start[uid]}-`` which is guaranteed
-        to be present and unique. A more descriptive value depends on the
-        application and is therefore left to the user.
+        from the RunStart (start), EventDescriptor (descriptor) or Event
+        (event) documents. The default value is ``{start[uid]}-`` which is
+        guaranteed to be present and unique. A more descriptive value depends
+        on the application and is therefore left to the user.
 
     bigtiff : boolean, optional
         Passed into ``tifffile.TiffWriter``. Default False.
