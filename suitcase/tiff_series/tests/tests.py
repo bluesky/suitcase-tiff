@@ -71,12 +71,12 @@ def test_path_formatting(file_prefix, example_data, tmp_path):
                         start=start, descriptor=descriptors[doc['descriptor']],
                         event=event)
                     events_list.append(templated_file_prefix.partition('-')[0])
-            elif name == 'bulk_event':
+            elif name == 'bulk_events':
                 for key, events in doc.items():
                     for event in events:
                         templated_file_prefix = file_prefix.format(
                             start=start,
-                            descriptor=descriptors[doc['descriptor']],
+                            descriptor=descriptors[event['descriptor']],
                             event=event)
                         events_list.append(
                             templated_file_prefix.partition('-')[0])
@@ -90,7 +90,8 @@ def test_path_formatting(file_prefix, example_data, tmp_path):
     events_list = _name_templator(collector, file_prefix)
 
     if artifacts:
-        for artifact, expected in zip(artifacts['stream_data'], events_list):
+        for artifact, expected in zip(sorted(artifacts['stream_data']),
+                                      sorted(events_list)):
             actual = str(artifact).split('/')[-1].partition('-')[0]
             assert actual == expected
 
