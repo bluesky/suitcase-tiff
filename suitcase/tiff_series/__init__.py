@@ -1,9 +1,4 @@
-# Suitcase subpackages must follow strict naming and interface conventions. The
-# public API should include some subset of the following. Any functions not
-# implemented should be omitted, rather than included and made to raise
-# NotImplementError, so that a client importing this library can immediately
-# know which portions of the suitcase API it supports without calling any
-# functions.
+from collections import defaultdict
 from tifffile import TiffWriter
 import event_model
 import numpy
@@ -48,17 +43,17 @@ def export(gen, directory, file_prefix='{start[uid]}-', bigtiff=False,
         memory buffer, network socket, or other writable buffer. It should be
         an instance of ``suitcase.utils.MemoryBufferManager`` and
         ``suitcase.utils.MultiFileManager`` or any object implementing that
-        inferface. See the suitcase documentation (LINK ONCE WRITTEN) for
-        details.
+        interface. See the suitcase documentation
+        (http://nsls-ii.github.io/suitcase) for details.
 
     file_prefix : str, optional
         The first part of the filename of the generated output files. This
         string may include templates as in
         ``{start[proposal_id]}-{start[sample_name]}-``, which are populated
-        from the RunStart(start), descriptor(descriptor) or event(event)
-        documents. The default value is ``{start[uid]}-`` which is guaranteed
-        to be present and unique. A more descriptive value depends on the
-        application and is therefore left to the user.
+        from the RunStart (start), EventDescriptor (descriptor) or Event
+        (event) documents. The default value is ``{start[uid]}-`` which is
+        guaranteed to be present and unique. A more descriptive value depends
+        on the application and is therefore left to the user.
 
     bigtiff : boolean, optional
         Passed into ``tifffile.TiffWriter``. Default False.
@@ -80,17 +75,17 @@ def export(gen, directory, file_prefix='{start[uid]}-', bigtiff=False,
     Examples
     --------
 
-    Generate files with unique-identifer names in the current directory.
+    Generate files with unique-identifier names in the current directory.
 
     >>> export(gen, '')
 
     Generate files with more readable metadata in the file names.
 
-    >>> export(gen, '', '{start.plan_name}-{start.motors}-')
+    >>> export(gen, '', '{start[plan_name]}-{start[motors]}-')
 
     Include the experiment's start time formatted as YY-MM-DD_HH-MM.
 
-    >>> export(gen, '', '{start.time:%%Y-%%m-%%d_%%H:%%M}-')
+    >>> export(gen, '', '{start[time]:%Y-%m-%d_%H:%M}-')
 
     Place the files in a different directory, such as on a mounted USB stick.
 
@@ -105,6 +100,10 @@ def export(gen, directory, file_prefix='{start[uid]}-', bigtiff=False,
             serializer(*item)
 
     return serializer.artifacts
+
+
+# Note that this is a subclass of tiff_stack.Serializer to reduce code
+# duplication.
 
 
 class Serializer(tiff_stack.Serializer):
@@ -138,17 +137,17 @@ class Serializer(tiff_stack.Serializer):
         memory buffer, network socket, or other writable buffer. It should be
         an instance of ``suitcase.utils.MemoryBufferManager`` and
         ``suitcase.utils.MultiFileManager`` or any object implementing that
-        inferface. See the suitcase documentation (LINK ONCE WRITTEN) for
-        details.
+        interface. See the suitcase documentation
+        (http://nsls-ii.github.io/suitcase) for details.
 
     file_prefix : str, optional
         The first part of the filename of the generated output files. This
         string may include templates as in
         ``{start[proposal_id]}-{start[sample_name]}-``, which are populated
-        from the RunStart(start), descriptor(descriptor) or event(event)
-        documents. The default value is ``{start[uid]}-`` which is guaranteed
-        to be present and unique. A more descriptive value depends on the
-        application and is therefore left to the user.
+        from the RunStart (start), EventDescriptor (descriptor) or Event
+        (event) documents. The default value is ``{start[uid]}-`` which is
+        guaranteed to be present and unique. A more descriptive value depends
+        on the application and is therefore left to the user.
 
     bigtiff : boolean, optional
         Passed into ``tifffile.TiffWriter``. Default False.
@@ -162,6 +161,13 @@ class Serializer(tiff_stack.Serializer):
     **kwargs : kwargs
         kwargs to be passed to ``tifffile.TiffWriter.save``.
     """
+    def __init__(self, directory, file_prefix='{uid}-', bigtiff=False,
+                 byteorder=None, imagej=False, **kwargs):
+        super().__init__(directory, file_prefix, bigtiff,
+                         byteorder, imagej, **kwargs)
+        # maps stream name to dict that map field name to index (#)
+        self._counter = defaultdict(lambda: defaultdict(lambda: 0))
+
     def event_page(self, doc):
         '''Converts an 'event_page' doc to 'event' docs for processing.
 
@@ -212,12 +218,7 @@ class Serializer(tiff_stack.Serializer):
                 self._templated_file_prefix = self._file_prefix.format(
                     start=self._start, descriptor=descriptor,
                     event=doc)
-                if not (self._counter.get(streamname, {}).get(field) or
-                        self._counter.get(streamname, {}).get(field)
-                        == 0):
-                    self._counter[streamname][field] = 0
-                else:
-                    self._counter[streamname][field] += 1
+                self._counter[streamname][field] += 1
                 num = self._counter[streamname][field]
                 filename = (f'{self._templated_file_prefix}'
                             f'{streamname}-{field}-{num}.tiff')

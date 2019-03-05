@@ -1,9 +1,3 @@
-# Suitcase subpackages must follow strict naming and interface conventions. The
-# public API should include some subset of the following. Any functions not
-# implemented should be omitted, rather than included and made to raise
-# NotImplementError, so that a client importing this library can immediately
-# know which portions of the suitcase API it supports without calling any
-# functions.
 from collections import defaultdict
 from pathlib import Path
 from tifffile import TiffWriter
@@ -50,8 +44,8 @@ def export(gen, directory, file_prefix='{uid}-', bigtiff=False, byteorder=None,
         memory buffer, network socket, or other writable buffer. It should be
         an instance of ``suitcase.utils.MemoryBufferManager`` and
         ``suitcase.utils.MultiFileManager`` or any object implementing that
-        inferface. See the suitcase documentation (LINK ONCE WRITTEN) for
-        details.
+        interface. See the suitcase documentation
+        (http://nsls-ii.github.io/suitcase) for details.
 
     file_prefix : str, optional
         The first part of the filename of the generated output files. This
@@ -81,7 +75,7 @@ def export(gen, directory, file_prefix='{uid}-', bigtiff=False, byteorder=None,
     Examples
     --------
 
-    Generate files with unique-identifer names in the current directory.
+    Generate files with unique-identifier names in the current directory.
 
     >>> export(gen, '')
 
@@ -91,7 +85,7 @@ def export(gen, directory, file_prefix='{uid}-', bigtiff=False, byteorder=None,
 
     Include the experiment's start time formatted as YY-MM-DD_HH-MM.
 
-    >>> export(gen, '', '{time:%%Y-%%m-%%d_%%H:%%M}-')
+    >>> export(gen, '', '{time:%Y-%m-%d_%H:%M}-')
 
     Place the files in a different directory, such as on a mounted USB stick.
 
@@ -106,10 +100,6 @@ def export(gen, directory, file_prefix='{uid}-', bigtiff=False, byteorder=None,
             serializer(*item)
 
     return serializer.artifacts
-
-
-# NOTE: Below I have made this a child of suitcase-tiff/suitcase/tiff_series to
-# reduce the amount of duplicate code.
 
 
 class Serializer(event_model.DocumentRouter):
@@ -143,8 +133,8 @@ class Serializer(event_model.DocumentRouter):
         memory buffer, network socket, or other writable buffer. It should be
         an instance of ``suitcase.utils.MemoryBufferManager`` and
         ``suitcase.utils.MultiFileManager`` or any object implementing that
-        inferface. See the suitcase documentation (LINK ONCE WRITTEN) for
-        details.
+        interface. See the suitcase documentation
+        (http://nsls-ii.github.io/suitcase) for details.
 
     file_prefix : str, optional
         The first part of the filename of the generated output files. This
@@ -191,7 +181,6 @@ class Serializer(event_model.DocumentRouter):
         self._kwargs = kwargs  # passed to TiffWriter.save()
         self._start = {}  # holds the start document information
         self._descriptors = {}  # maps the descriptor uids to descriptor docs.
-        self._counter = defaultdict(dict)  # map stream_name to field/# dict
 
     @property
     def artifacts(self):
@@ -222,7 +211,7 @@ class Serializer(event_model.DocumentRouter):
     def descriptor(self, doc):
         '''Use `descriptor` doc to map stream_names to descriptor uid's.
 
-        This method usess the descriptor document information to map the
+        This method uses the descriptor document information to map the
         stream_names to descriptor uid's.
 
         Parameters:
