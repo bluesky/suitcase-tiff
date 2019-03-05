@@ -90,7 +90,7 @@ def export(gen, directory, file_prefix='{start[uid]}-', bigtiff=False,
 
     Include the experiment's start time formatted as YY-MM-DD_HH-MM.
 
-    >>> export(gen, '', '{start[time]:%%Y-%%m-%%d_%%H:%%M}-')
+    >>> export(gen, '', '{start[time]:%Y-%m-%d_%H:%M}-')
 
     Place the files in a different directory, such as on a mounted USB stick.
 
