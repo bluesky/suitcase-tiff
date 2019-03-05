@@ -101,6 +101,10 @@ def export(gen, directory, file_prefix='{start[uid]}-', bigtiff=False,
     return serializer.artifacts
 
 
+# Note that this is a subclass of tiff_stack.Serializer to reduce code
+# duplication.
+
+
 class Serializer(tiff_stack.Serializer):
     """
     Serialize a stream of documents to a series of TIFF files.

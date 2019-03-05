@@ -102,10 +102,6 @@ def export(gen, directory, file_prefix='{uid}-', bigtiff=False, byteorder=None,
     return serializer.artifacts
 
 
-# NOTE: Below I have made this a child of suitcase-tiff/suitcase/tiff_series to
-# reduce the amount of duplicate code.
-
-
 class Serializer(event_model.DocumentRouter):
     """
     Serialize a stream of documents to TIFF stack(s).
