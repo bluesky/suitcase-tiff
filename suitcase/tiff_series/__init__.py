@@ -86,11 +86,11 @@ def export(gen, directory, file_prefix='{start[uid]}-', bigtiff=False,
 
     Generate files with more readable metadata in the file names.
 
-    >>> export(gen, '', '{start.plan_name}-{start.motors}-')
+    >>> export(gen, '', '{start[plan_name]}-{start[motors]}-')
 
     Include the experiment's start time formatted as YY-MM-DD_HH-MM.
 
-    >>> export(gen, '', '{start.time:%%Y-%%m-%%d_%%H:%%M}-')
+    >>> export(gen, '', '{start[time]:%%Y-%%m-%%d_%%H:%%M}-')
 
     Place the files in a different directory, such as on a mounted USB stick.
 
