@@ -16,7 +16,7 @@ def export(gen, directory, file_prefix='{start[uid]}-', bigtiff=False,
 
     This creates a file named:
     ``<directory>/<file_prefix>{stream_name}-{field}-{image_number}.tiff``
-    for every Event stream and field that contains 2D 'image like' data.
+    for every Event stream and field that contains 2D 'image-like' data.
 
     .. warning::
 
@@ -83,7 +83,7 @@ def export(gen, directory, file_prefix='{start[uid]}-', bigtiff=False,
 
     >>> export(gen, '', '{start[plan_name]}-{start[motors]}-')
 
-    Include the experiment's start time formatted as YY-MM-DD_HH-MM.
+    Include the experiment's start time formatted as YYYY-MM-DD_HH-MM.
 
     >>> export(gen, '', '{start[time]:%Y-%m-%d_%H:%M}-')
 
@@ -112,7 +112,7 @@ class Serializer(tiff_stack.Serializer):
 
     This creates a file named:
     ``<directory>/<file_prefix>{stream_name}-{field}-{image_number}.tiff``
-    for every Event stream and field that contains 2D 'image like' data.
+    for every Event stream and field that contains 2D 'image-like' data.
 
     .. warning::
 
@@ -185,11 +185,11 @@ class Serializer(tiff_stack.Serializer):
         '''Add event document information to a ".tiff" file.
 
         This method adds event document information to a ".tiff" file,
-        creating it if nesecary.
+        creating it if necessary.
 
         .. warning::
 
-            All non 2D 'image like' data is explicitly ignored.
+            All non 2D 'image-like' data is explicitly ignored.
 
         .. note::
 
