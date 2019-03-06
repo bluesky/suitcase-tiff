@@ -75,9 +75,9 @@ author = 'suitcase.tiff Contributors'
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
-import suitcase.tiff
+import suitcase.tiff_series
 # The short X.Y version.
-version = suitcase.tiff.__version__
+version = suitcase.tiff_series.__version__
 # The full version, including alpha/beta/rc tags.
 release = version
 

@@ -1,9 +1,3 @@
-# Suitcase subpackages must follow strict naming and interface conventions. The
-# public API should include some subset of the following. Any functions not
-# implemented should be omitted, rather than included and made to raise
-# NotImplementError, so that a client importing this library can immediately
-# know which portions of the suitcase API it supports without calling any
-# functions.
 from collections import defaultdict
 from pathlib import Path
 from tifffile import TiffWriter
@@ -16,8 +10,8 @@ __version__ = get_versions()['version']
 del get_versions
 
 
-def export(gen, directory, file_prefix='{uid}-', stack_images=True,
-           bigtiff=False, byteorder=None, imagej=False, **kwargs):
+def export(gen, directory, file_prefix='{uid}-', bigtiff=False, byteorder=None,
+           imagej=False, **kwargs):
     """
     Export a stream of documents to TIFF stack(s).
 
@@ -50,8 +44,8 @@ def export(gen, directory, file_prefix='{uid}-', stack_images=True,
         memory buffer, network socket, or other writable buffer. It should be
         an instance of ``suitcase.utils.MemoryBufferManager`` and
         ``suitcase.utils.MultiFileManager`` or any object implementing that
-        inferface. See the suitcase documentation (LINK ONCE WRITTEN) for
-        details.
+        interface. See the suitcase documentation
+        (http://nsls-ii.github.io/suitcase) for details.
 
     file_prefix : str, optional
         The first part of the filename of the generated output files. This
@@ -60,12 +54,6 @@ def export(gen, directory, file_prefix='{uid}-', stack_images=True,
         ``{uid}-`` which is guaranteed to be present and unique. A more
         descriptive value depends on the application and is therefore left to
         the user.
-
-    stack_images : Boolean, optional
-        This indicates if we want one image per file (`stack_images` = `False`)
-        or many images per file (`stack_images` = `True`). If using
-        `stack_images` = `False` then an additional image number is added to
-        the file name.
 
     bigtiff : boolean, optional
         Passed into ``tifffile.TiffWriter``. Default False.
@@ -87,7 +75,7 @@ def export(gen, directory, file_prefix='{uid}-', stack_images=True,
     Examples
     --------
 
-    Generate files with unique-identifer names in the current directory.
+    Generate files with unique-identifier names in the current directory.
 
     >>> export(gen, '')
 
@@ -97,14 +85,13 @@ def export(gen, directory, file_prefix='{uid}-', stack_images=True,
 
     Include the experiment's start time formatted as YY-MM-DD_HH-MM.
 
-    >>> export(gen, '', '{time:%%Y-%%m-%%d_%%H:%%M}-')
+    >>> export(gen, '', '{time:%Y-%m-%d_%H:%M}-')
 
     Place the files in a different directory, such as on a mounted USB stick.
 
     >>> export(gen, '/path/to/my_usb_stick')
     """
     with Serializer(directory, file_prefix,
-                    stack_images=stack_images,
                     bigtiff=bigtiff,
                     byteorder=byteorder,
                     imagej=imagej,
@@ -146,8 +133,8 @@ class Serializer(event_model.DocumentRouter):
         memory buffer, network socket, or other writable buffer. It should be
         an instance of ``suitcase.utils.MemoryBufferManager`` and
         ``suitcase.utils.MultiFileManager`` or any object implementing that
-        inferface. See the suitcase documentation (LINK ONCE WRITTEN) for
-        details.
+        interface. See the suitcase documentation
+        (http://nsls-ii.github.io/suitcase) for details.
 
     file_prefix : str, optional
         The first part of the filename of the generated output files. This
@@ -175,25 +162,25 @@ class Serializer(event_model.DocumentRouter):
     **kwargs : kwargs
         kwargs to be passed to ``tifffile.TiffWriter.save``.
     """
-    def __init__(self, directory, file_prefix='{uid}-', stack_images=True,
-                 bigtiff=False, byteorder=None, imagej=False, **kwargs):
+
+    def __init__(self, directory, file_prefix='{uid}-', bigtiff=False,
+                 byteorder=None, imagej=False, **kwargs):
 
         if isinstance(directory, (str, Path)):
             self._manager = suitcase.utils.MultiFileManager(directory)
         else:
             self._manager = directory
 
-        self._streamnames = defaultdict(dict)  # stream_names to desc  uids
         # Map stream name to dict that maps field names to TiffWriter objects.
         self._tiff_writers = defaultdict(dict)
+
         self._file_prefix = file_prefix
         self._templated_file_prefix = ''
         self._init_kwargs = {'bigtiff': bigtiff, 'byteorder': byteorder,
                              'imagej': imagej}  # passed to TiffWriter()
         self._kwargs = kwargs  # passed to TiffWriter.save()
-        self._start_found = False
-        self._stack_images = stack_images
-        self._counter = defaultdict(dict)  # map stream_name to field/# dict
+        self._start = {}  # holds the start document information
+        self._descriptors = {}  # maps the descriptor uids to descriptor docs.
 
     @property
     def artifacts(self):
@@ -214,20 +201,17 @@ class Serializer(event_model.DocumentRouter):
         '''
 
         # raise an error if this is the second `start` document seen.
-        if self._start_found:
+        if self._start:
             raise RuntimeError(
                 "The serializer in suitcase.tiff expects documents from one "
                 "run only. Two `start` documents where sent to it")
         else:
-            self._start_found = True
-
-        # format self._file_prefix
-        self._templated_file_prefix = self._file_prefix.format(**doc)
+            self._start = doc  # record the start doc for later use
 
     def descriptor(self, doc):
         '''Use `descriptor` doc to map stream_names to descriptor uid's.
 
-        This method usess the descriptor document information to map the
+        This method uses the descriptor document information to map the
         stream_names to descriptor uid's.
 
         Parameters:
@@ -235,9 +219,8 @@ class Serializer(event_model.DocumentRouter):
         doc : dict
             EventDescriptor document
         '''
-        # extract some useful info from the doc
-        streamname = doc.get('name')
-        self._streamnames[doc['uid']] = streamname
+        # record the doc for later use
+        self._descriptors[doc['uid']] = doc
 
     def event_page(self, doc):
         '''Add event page document information to a ".tiff" file.
@@ -264,38 +247,23 @@ class Serializer(event_model.DocumentRouter):
             EventPage document
         '''
         event_model.verify_filled(doc)
-        streamname = self._streamnames[doc['descriptor']]
+        streamname = self._descriptors[doc['descriptor']].get('name')
         for field in doc['data']:
             for img in doc['data'][field]:
                 # check that the data is 2D, if not ignore it
                 img_asarray = numpy.asarray(img)
                 if img_asarray.ndim == 2:
-                    if self._stack_images:
-                        # create a file for this stream and field if required
-                        if not self._tiff_writers.get(streamname, {}).get(field):
-                            filename = (f'{self._templated_file_prefix}'
-                                        f'{streamname}-{field}.tiff')
-                            file = self._manager.open(
-                                'stream_data', filename, 'xb')
-                            tw = TiffWriter(file, **self._init_kwargs)
-                            self._tiff_writers[streamname][field] = tw
-                        # append the image to the file
-                        tw = self._tiff_writers[streamname][field]
-                        tw.save(img_asarray, *self._kwargs)
-                    else:
-                        if not (self._counter.get(streamname, {}).get(field) or
-                                self._counter.get(streamname, {}).get(field)
-                                == 0):
-                            self._counter[streamname][field] = 0
-                        else:
-                            self._counter[streamname][field] += 1
-                        num = self._counter[streamname][field]
+                    # create a file for this stream and field if required
+                    if not self._tiff_writers.get(streamname, {}).get(field):
                         filename = (f'{self._templated_file_prefix}'
-                                    f'{streamname}-{field}-{num}.tiff')
-                        file = self._manager.open('stream_data', filename, 'xb')
+                                    f'{streamname}-{field}.tiff')
+                        file = self._manager.open(
+                            'stream_data', filename, 'xb')
                         tw = TiffWriter(file, **self._init_kwargs)
-                        self._tiff_writers[streamname][field+f'-{num}'] = tw
-                        tw.save(img_asarray, *self._kwargs)
+                        self._tiff_writers[streamname][field] = tw
+                    # append the image to the file
+                    tw = self._tiff_writers[streamname][field]
+                    tw.save(img_asarray, *self._kwargs)
 
     def close(self):
         '''Close all of the files opened by this Serializer.
