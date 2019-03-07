@@ -55,7 +55,6 @@ def create_expected(collector, stack_images):
 def test_path_formatting(file_prefix, example_data, tmp_path):
     collector = example_data()
     artifacts = export(collector, tmp_path, file_prefix=file_prefix)
-    expected = file_prefix.partition('-')[0]
 
     def _name_templator(collector, file_prefix):
         events_list = []
@@ -90,10 +89,9 @@ def test_path_formatting(file_prefix, example_data, tmp_path):
     events_list = _name_templator(collector, file_prefix)
 
     if artifacts:
-        for artifact, expected in zip(sorted(artifacts['stream_data']),
-                                      sorted(events_list)):
-            actual = str(artifact).split('/')[-1].partition('-')[0]
-            assert actual == expected
+        unique_actual = set(str(artifact).split('/')[-1].partition('-')[0]
+                            for artifact in artifacts['stream_data'])
+        assert unique_actual == set(events_list)
 
 
 def test_export(tmp_path, example_data):
