@@ -55,7 +55,6 @@ def create_expected(collector, stack_images):
 def test_path_formatting(file_prefix, example_data, tmp_path):
     collector = example_data()
     artifacts = export(collector, tmp_path, file_prefix=file_prefix)
-    expected = file_prefix.partition('-')[0]
 
     def _name_templator(collector, file_prefix):
         events_list = []
