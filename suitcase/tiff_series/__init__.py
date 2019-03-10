@@ -162,7 +162,7 @@ class Serializer(tiff_stack.Serializer):
     **kwargs : kwargs
         kwargs to be passed to ``tifffile.TiffWriter.save``.
     """
-    def __init__(self, directory, file_prefix='{uid}-', bigtiff=False,
+    def __init__(self, directory, file_prefix='{start[uid]}-', bigtiff=False,
                  byteorder=None, imagej=False, **kwargs):
         super().__init__(directory, file_prefix, bigtiff,
                          byteorder, imagej, **kwargs)
