@@ -198,7 +198,7 @@ class Serializer(tiff_stack.Serializer):
                     self._templated_directory = self._directory.format(
                         start=doc)
                 except AttributeError:
-                    self._templated_directory= self._directory
+                    self._templated_directory = self._directory
                 self._manager = suitcase.utils.MultiFileManager(
                     self._templated_directory)
             else:
