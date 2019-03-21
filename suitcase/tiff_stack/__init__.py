@@ -127,7 +127,8 @@ class Serializer(event_model.DocumentRouter):
     directory : string, Path or Manager.
         For basic uses, this should be the path to the output directory given
         as a string or Path object. Use an empty string ``''`` to place files
-        in the current working directory.
+        in the current working directory. This can include templates from the
+        'start' document as discussed for 'file_prefix' below.
 
         In advanced applications, this may direct the serialized output to a
         memory buffer, network socket, or other writable buffer. It should be
@@ -166,10 +167,8 @@ class Serializer(event_model.DocumentRouter):
     def __init__(self, directory, file_prefix='{uid}-', bigtiff=False,
                  byteorder=None, imagej=False, **kwargs):
 
-        if isinstance(directory, (str, Path)):
-            self._manager = suitcase.utils.MultiFileManager(directory)
-        else:
-            self._manager = directory
+        self._directory = directory
+        self._templated_directory = directory
 
         # Map stream name to dict that maps field names to TiffWriter objects.
         self._tiff_writers = defaultdict(dict)
@@ -207,6 +206,12 @@ class Serializer(event_model.DocumentRouter):
                 "run only. Two `start` documents where sent to it")
         else:
             self._start = doc  # record the start doc for later use
+            if isinstance(self._directory, (str, Path)):
+                self._templated_directory = self._directory.format(**doc)
+                self._manager = suitcase.utils.MultiFileManager(
+                    self._templated_directory)
+            else:
+                self._manager = self._directory
 
     def descriptor(self, doc):
         '''Use `descriptor` doc to map stream_names to descriptor uid's.
@@ -248,6 +253,8 @@ class Serializer(event_model.DocumentRouter):
         '''
         event_model.verify_filled(doc)
         streamname = self._descriptors[doc['descriptor']].get('name')
+        # format self._file_prefix
+        self._templated_file_prefix = self._file_prefix.format(**self._start)
         for field in doc['data']:
             for img in doc['data'][field]:
                 # check that the data is 2D, if not ignore it

@@ -2,6 +2,8 @@ from collections import defaultdict
 import event_model
 import itertools
 import numpy
+from pathlib import Path
+import suitcase.utils
 from suitcase import tiff_stack
 from tifffile import TiffWriter
 from ._version import get_versions
@@ -38,7 +40,8 @@ def export(gen, directory, file_prefix='{start[uid]}-', bigtiff=False,
     directory : string, Path or Manager.
         For basic uses, this should be the path to the output directory given
         as a string or Path object. Use an empty string ``''`` to place files
-        in the current working directory.
+        in the current working directory. This can take templated data from the
+        'start' document as described for 'file_prefix' below.
 
         In advanced applications, this may direct the serialized output to a
         memory buffer, network socket, or other writable buffer. It should be
@@ -132,7 +135,8 @@ class Serializer(tiff_stack.Serializer):
     directory : string, Path or Manager.
         For basic uses, this should be the path to the output directory given
         as a string or Path object. Use an empty string ``''`` to place files
-        in the current working directory.
+        in the current working directory. This can also contain metadata,
+        formated as described under `file_prefix` below.
 
         In advanced applications, this may direct the serialized output to a
         memory buffer, network socket, or other writable buffer. It should be
@@ -164,10 +168,37 @@ class Serializer(tiff_stack.Serializer):
     """
     def __init__(self, directory, file_prefix='{start[uid]}-', bigtiff=False,
                  byteorder=None, imagej=False, **kwargs):
+
         super().__init__(directory, file_prefix, bigtiff,
                          byteorder, imagej, **kwargs)
         # maps stream name to dict that map field name to index (#)
         self._counter = defaultdict(lambda: defaultdict(itertools.count))
+
+    def start(self, doc):
+        '''Extracts `start` document information for formatting file_prefix.
+
+        This method checks that only one `start` document is seen and formats
+        `file_prefix` based on the contents of the `start` document.
+
+        Parameters:
+        -----------
+        doc : dict
+            RunStart document
+        '''
+
+        # raise an error if this is the second `start` document seen.
+        if self._start:
+            raise RuntimeError(
+                "The serializer in suitcase.tiff expects documents from one "
+                "run only. Two `start` documents where sent to it")
+        else:
+            self._start = doc  # record the start doc for later use
+            if isinstance(self._directory, (str, Path)):
+                self._templated_directory = self._directory.format(start=doc)
+                self._manager = suitcase.utils.MultiFileManager(
+                    self._templated_directory)
+            else:
+                self._manager = self._directory
 
     def event_page(self, doc):
         '''Converts an 'event_page' doc to 'event' docs for processing.
