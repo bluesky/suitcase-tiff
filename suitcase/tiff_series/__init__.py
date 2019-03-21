@@ -194,7 +194,11 @@ class Serializer(tiff_stack.Serializer):
         else:
             self._start = doc  # record the start doc for later use
             if isinstance(self._directory, (str, Path)):
-                self._templated_directory = self._directory.format(start=doc)
+                try:  # if self._directory is a string
+                    self._templated_directory = self._directory.format(
+                        start=doc)
+                except AttributeError:
+                    self._templated_directory= self._directory
                 self._manager = suitcase.utils.MultiFileManager(
                     self._templated_directory)
             else:
