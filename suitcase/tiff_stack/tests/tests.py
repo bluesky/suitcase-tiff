@@ -6,12 +6,12 @@ import tifffile
 
 
 def test_export(tmp_path, example_data):
-    ''' runs a test using the plan that is passed through to it.
+    '''Runs a test using the plan that is passed through to it.
 
     ..note::
 
         Due to the `example_data` `pytest.fixture` this will run multiple tests
-        each with a range of detectors and a range of event_types. see
+         each with a range of detectors and a range of event_types. See
         `suitcase.utils.conftest` for more info.
 
     '''
@@ -27,13 +27,13 @@ def test_export(tmp_path, example_data):
 
 
 def test_file_prefix_formatting(file_prefix_list, example_data, tmp_path):
-    ''' runs a test of the file_prefix formatting.
+    '''Runs a test of the file_prefix formatting.
 
     ..note::
 
         Due to the `file_prefix_list` and `example_data` `pytest.fixture`'s
         this will run multiple tests each with a range of file_prefixes,
-        detectors and event_types. see `suitcase.utils.conftest` for more info.
+        detectors and event_types. See `suitcase.utils.conftest` for more info.
 
     '''
     collector = example_data()
@@ -51,13 +51,13 @@ def test_file_prefix_formatting(file_prefix_list, example_data, tmp_path):
 
 
 def test_directory_formatting(directory_list, example_data, tmp_path):
-    ''' runs a test of the file_prefix formatting.
+    '''Runs a test of the directory formatting.
 
     ..note::
 
-        Due to the `file_prefix_list` and `example_data` `pytest.fixture`'s
-        this will run multiple tests each with a range of file_prefixes,
-        detectors and event_types. see `suitcase.utils.conftest` for more info.
+        Due to the `directory_list` and `example_data` `pytest.fixture`'s
+        this will run multiple tests each with a range of directories,
+        detectors and event_types. See `suitcase.utils.conftest` for more info.
 
     '''
     collector = example_data()
@@ -67,6 +67,7 @@ def test_directory_formatting(directory_list, example_data, tmp_path):
     for name, doc in collector:
         if name == 'start':
             templated_directory = directory.format(**doc).partition('-')[0]
+            break
 
     if artifacts:
         unique_actual = set(str(artifact).rsplit('/', 1)[0].partition('-')[0]

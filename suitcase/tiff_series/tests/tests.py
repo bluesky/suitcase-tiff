@@ -117,7 +117,7 @@ def test_export(tmp_path, example_data):
 
 @pytest.mark.parametrize("directory", ['', '/test-', '/scan_{start[uid]}-'])
 def test_directory_formatting(directory, example_data, tmp_path):
-    ''' runs a test of the file_prefix formatting.
+    '''Runs a test of the file_prefix formatting.
 
     ..note::
 
@@ -133,6 +133,7 @@ def test_directory_formatting(directory, example_data, tmp_path):
     for name, doc in collector:
         if name == 'start':
             templated_directory = directory.format(start=doc).partition('-')[0]
+            break
 
     if artifacts:
         unique_actual = set(str(artifact).rsplit('/', 1)[0].partition('-')[0]
