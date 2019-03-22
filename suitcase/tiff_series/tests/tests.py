@@ -127,7 +127,7 @@ def test_directory_formatting(directory, example_data, tmp_path):
 
     '''
     collector = example_data()
-    directory = str(tmp_path)+directory
+    directory = str(tmp_path) + directory
     artifacts = export(collector, directory)
 
     for name, doc in collector:
