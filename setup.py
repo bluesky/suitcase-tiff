@@ -37,6 +37,7 @@ setup(
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     long_description=readme,
+    long_description_content_type='text/markdown',
     packages=['suitcase.tiff_series', 'suitcase.tiff_series.tests',
               'suitcase.tiff_stack', 'suitcase.tiff_stack.tests'],
     entry_points={
