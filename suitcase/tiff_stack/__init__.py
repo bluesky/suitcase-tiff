@@ -181,7 +181,7 @@ class Serializer(event_model.DocumentRouter):
         self._init_kwargs = {'bigtiff': bigtiff, 'byteorder': byteorder,
                              'imagej': imagej}  # passed to TiffWriter()
         self._kwargs = kwargs  # passed to TiffWriter.save()
-        self._start = {}  # holds the start document information
+        self._start = None  # holds the start document information
         self._descriptors = {}  # maps the descriptor uids to descriptor docs.
 
     @property
