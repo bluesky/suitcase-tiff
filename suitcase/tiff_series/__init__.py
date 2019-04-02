@@ -47,6 +47,13 @@ def export(gen, directory, file_prefix='{start[uid]}-', astype='uint16',
         interface. See the suitcase documentation
         (http://nsls-ii.github.io/suitcase) for details.
 
+    astype : numpy dtype
+        The image array is converted to this type before being passed to
+        tifffile. The default is 16-bit integer (``'uint16'``) since many image
+        viewers cannot open higher bit depths. This paramter may be given as a
+        numpy dtype object (``numpy.uint32``) or the equivalent string
+        (``'uint32'``).
+
     file_prefix : str, optional
         The first part of the filename of the generated output files. This
         string may include templates as in
@@ -151,6 +158,13 @@ class Serializer(tiff_stack.Serializer):
         guaranteed to be present and unique. A more descriptive value depends
         on the application and is therefore left to the user.
 
+    astype : numpy dtype
+        The image array is converted to this type before being passed to
+        tifffile. The default is 16-bit integer (``'uint16'``) since many image
+        viewers cannot open higher bit depths. This paramter may be given as a
+        numpy dtype object (``numpy.uint32``) or the equivalent string
+        (``'uint32'``).
+
     bigtiff : boolean, optional
         Passed into ``tifffile.TiffWriter``. Default False.
 
@@ -166,7 +180,8 @@ class Serializer(tiff_stack.Serializer):
     def __init__(self, directory, file_prefix='{start[uid]}-', astype='uint16',
                  bigtiff=False, byteorder=None, imagej=False, **kwargs):
         super().__init__(directory, file_prefix=file_prefix, astype=astype,
-                         bigtiff=bigtiff, byteorder=byteorder, imagej=imagej, **kwargs)
+                         bigtiff=bigtiff, byteorder=byteorder, imagej=imagej,
+                         **kwargs)
         # maps stream name to dict that map field name to index (#)
         self._counter = defaultdict(lambda: defaultdict(itertools.count))
 

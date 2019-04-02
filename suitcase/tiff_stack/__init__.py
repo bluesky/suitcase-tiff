@@ -55,6 +55,13 @@ def export(gen, directory, file_prefix='{uid}-', astype='uint16',
         descriptive value depends on the application and is therefore left to
         the user.
 
+    astype : numpy dtype
+        The image array is converted to this type before being passed to
+        tifffile. The default is 16-bit integer (``'uint16'``) since many image
+        viewers cannot open higher bit depths. This paramter may be given as a
+        numpy dtype object (``numpy.uint32``) or the equivalent string
+        (``'uint32'``).
+
     bigtiff : boolean, optional
         Passed into ``tifffile.TiffWriter``. Default False.
 
@@ -145,11 +152,12 @@ class Serializer(event_model.DocumentRouter):
         descriptive value depends on the application and is therefore left to
         the user.
 
-    stack_images : Boolean
-        This indicates if we want one image per file (`stack_images` = `False`)
-        or many images per file (`stack_images` = `True`). If using
-        `stack_images` = `False` then an additional image number is added to
-        the file name.
+    astype : numpy dtype
+        The image array is converted to this type before being passed to
+        tifffile. The default is 16-bit integer (``'uint16'``) since many image
+        viewers cannot open higher bit depths. This paramter may be given as a
+        numpy dtype object (``numpy.uint32``) or the equivalent string
+        (``'uint32'``).
 
     bigtiff : boolean, optional
         Passed into ``tifffile.TiffWriter``. Default False.
