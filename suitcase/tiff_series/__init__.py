@@ -10,8 +10,8 @@ __version__ = get_versions()['version']
 del get_versions
 
 
-def export(gen, directory, file_prefix='{start[uid]}-', bigtiff=False,
-           byteorder=None, imagej=False, **kwargs):
+def export(gen, directory, file_prefix='{start[uid]}-', astype='uint16',
+           bigtiff=False, byteorder=None, imagej=False, **kwargs):
     """
     Export a stream of documents to a series of TIFF files.
 
@@ -93,6 +93,7 @@ def export(gen, directory, file_prefix='{start[uid]}-', bigtiff=False,
     >>> export(gen, '/path/to/my_usb_stick')
     """
     with Serializer(directory, file_prefix,
+                    astype=astype,
                     bigtiff=bigtiff,
                     byteorder=byteorder,
                     imagej=imagej,
@@ -162,10 +163,10 @@ class Serializer(tiff_stack.Serializer):
     **kwargs : kwargs
         kwargs to be passed to ``tifffile.TiffWriter.save``.
     """
-    def __init__(self, directory, file_prefix='{start[uid]}-', bigtiff=False,
-                 byteorder=None, imagej=False, **kwargs):
-        super().__init__(directory, file_prefix, bigtiff,
-                         byteorder, imagej, **kwargs)
+    def __init__(self, directory, file_prefix='{start[uid]}-', astype='uint16',
+                 bigtiff=False, byteorder=None, imagej=False, **kwargs):
+        super().__init__(directory, file_prefix=file_prefix, astype=astype,
+                         bigtiff=bigtiff, byteorder=byteorder, imagej=imagej, **kwargs)
         # maps stream name to dict that map field name to index (#)
         self._counter = defaultdict(lambda: defaultdict(itertools.count))
 
@@ -213,7 +214,7 @@ class Serializer(tiff_stack.Serializer):
         for field in doc['data']:
             img = doc['data'][field]
             # check that the data is 2D, if not ignore it
-            img_asarray = numpy.asarray(img)
+            img_asarray = numpy.asarray(img, dtype=self._astype)
             if img_asarray.ndim == 2:
                 # template the file name.
                 self._templated_file_prefix = self._file_prefix.format(
