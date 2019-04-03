@@ -10,8 +10,8 @@ __version__ = get_versions()['version']
 del get_versions
 
 
-def export(gen, directory, file_prefix='{uid}-', bigtiff=False, byteorder=None,
-           imagej=False, **kwargs):
+def export(gen, directory, file_prefix='{uid}-', astype='uint16',
+           bigtiff=False, byteorder=None, imagej=False, **kwargs):
     """
     Export a stream of documents to TIFF stack(s).
 
@@ -55,6 +55,13 @@ def export(gen, directory, file_prefix='{uid}-', bigtiff=False, byteorder=None,
         descriptive value depends on the application and is therefore left to
         the user.
 
+    astype : numpy dtype
+        The image array is converted to this type before being passed to
+        tifffile. The default is 16-bit integer (``'uint16'``) since many image
+        viewers cannot open higher bit depths. This parameter may be given as a
+        numpy dtype object (``numpy.uint32``) or the equivalent string
+        (``'uint32'``).
+
     bigtiff : boolean, optional
         Passed into ``tifffile.TiffWriter``. Default False.
 
@@ -92,6 +99,7 @@ def export(gen, directory, file_prefix='{uid}-', bigtiff=False, byteorder=None,
     >>> export(gen, '/path/to/my_usb_stick')
     """
     with Serializer(directory, file_prefix,
+                    astype=astype,
                     bigtiff=bigtiff,
                     byteorder=byteorder,
                     imagej=imagej,
@@ -144,11 +152,12 @@ class Serializer(event_model.DocumentRouter):
         descriptive value depends on the application and is therefore left to
         the user.
 
-    stack_images : Boolean
-        This indicates if we want one image per file (`stack_images` = `False`)
-        or many images per file (`stack_images` = `True`). If using
-        `stack_images` = `False` then an additional image number is added to
-        the file name.
+    astype : numpy dtype
+        The image array is converted to this type before being passed to
+        tifffile. The default is 16-bit integer (``'uint16'``) since many image
+        viewers cannot open higher bit depths. This parameter may be given as a
+        numpy dtype object (``numpy.uint32``) or the equivalent string
+        (``'uint32'``).
 
     bigtiff : boolean, optional
         Passed into ``tifffile.TiffWriter``. Default False.
@@ -163,8 +172,8 @@ class Serializer(event_model.DocumentRouter):
         kwargs to be passed to ``tifffile.TiffWriter.save``.
     """
 
-    def __init__(self, directory, file_prefix='{uid}-', bigtiff=False,
-                 byteorder=None, imagej=False, **kwargs):
+    def __init__(self, directory, file_prefix='{uid}-', astype='uint16',
+                 bigtiff=False, byteorder=None, imagej=False, **kwargs):
 
         if isinstance(directory, (str, Path)):
             self._manager = suitcase.utils.MultiFileManager(directory)
@@ -176,10 +185,11 @@ class Serializer(event_model.DocumentRouter):
 
         self._file_prefix = file_prefix
         self._templated_file_prefix = ''
+        self._astype = astype  # convert numpy array dtype before tifffile
         self._init_kwargs = {'bigtiff': bigtiff, 'byteorder': byteorder,
                              'imagej': imagej}  # passed to TiffWriter()
         self._kwargs = kwargs  # passed to TiffWriter.save()
-        self._start = {}  # holds the start document information
+        self._start = None  # holds the start document information
         self._descriptors = {}  # maps the descriptor uids to descriptor docs.
 
     @property
@@ -251,7 +261,7 @@ class Serializer(event_model.DocumentRouter):
         for field in doc['data']:
             for img in doc['data'][field]:
                 # check that the data is 2D, if not ignore it
-                img_asarray = numpy.asarray(img)
+                img_asarray = numpy.asarray(img, dtype=numpy.dtype(self._astype))
                 if img_asarray.ndim == 2:
                     # create a file for this stream and field if required
                     if not self._tiff_writers.get(streamname, {}).get(field):
