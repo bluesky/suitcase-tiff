@@ -58,7 +58,7 @@ def export(gen, directory, file_prefix='{uid}-', astype='uint16',
     astype : numpy dtype
         The image array is converted to this type before being passed to
         tifffile. The default is 16-bit integer (``'uint16'``) since many image
-        viewers cannot open higher bit depths. This paramter may be given as a
+        viewers cannot open higher bit depths. This parameter may be given as a
         numpy dtype object (``numpy.uint32``) or the equivalent string
         (``'uint32'``).
 
@@ -155,7 +155,7 @@ class Serializer(event_model.DocumentRouter):
     astype : numpy dtype
         The image array is converted to this type before being passed to
         tifffile. The default is 16-bit integer (``'uint16'``) since many image
-        viewers cannot open higher bit depths. This paramter may be given as a
+        viewers cannot open higher bit depths. This parameter may be given as a
         numpy dtype object (``numpy.uint32``) or the equivalent string
         (``'uint32'``).
 
