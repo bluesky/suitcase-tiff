@@ -43,6 +43,7 @@ def test_file_prefix_formatting(file_prefix_list, example_data, tmp_path):
     for name, doc in collector:
         if name == 'start':
             templated_file_prefix = file_prefix.format(**doc).partition('-')[0]
+            break
 
     if artifacts:
         unique_actual = set(str(artifact).split('/')[-1].partition('-')[0]
