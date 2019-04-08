@@ -207,6 +207,8 @@ class Serializer(event_model.DocumentRouter):
                 "run only. Two `start` documents where sent to it")
         else:
             self._start = doc  # record the start doc for later use
+            self._templated_file_prefix = self._file_prefix.format(
+                **self._start)
 
     def descriptor(self, doc):
         '''Use `descriptor` doc to map stream_names to descriptor uid's.

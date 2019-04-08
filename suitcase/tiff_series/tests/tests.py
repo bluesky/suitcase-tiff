@@ -113,28 +113,3 @@ def test_export(tmp_path, example_data):
         actual = tifffile.imread(str(filename))
         streamname = os.path.basename(filename).split('-')[0]
         assert_array_equal(actual, expected[streamname])
-
-
-@pytest.mark.parametrize("directory", ['', '/test-', '/scan_{start[uid]}-'])
-def test_directory_formatting(directory, example_data, tmp_path):
-    ''' runs a test of the file_prefix formatting.
-
-    ..note::
-
-        Due to the `file_prefix_list` and `example_data` `pytest.fixture`'s
-        this will run multiple tests each with a range of file_prefixes,
-        detectors and event_types. see `suitcase.utils.conftest` for more info.
-
-    '''
-    collector = example_data()
-    directory = str(tmp_path)+directory
-    artifacts = export(collector, directory)
-
-    for name, doc in collector:
-        if name == 'start':
-            templated_directory = directory.format(start=doc).partition('-')[0]
-
-    if artifacts:
-        unique_actual = set(str(artifact).rsplit('/', 1)[0].partition('-')[0]
-                            for artifact in artifacts['stream_data'])
-        assert unique_actual == set([templated_directory])
