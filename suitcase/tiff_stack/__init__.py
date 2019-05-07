@@ -258,6 +258,7 @@ class Serializer(event_model.DocumentRouter):
         '''
         event_model.verify_filled(doc)
         streamname = self._descriptors[doc['descriptor']].get('name')
+        self._templated_file_prefix = self._file_prefix.format(**self._start)
         for field in doc['data']:
             for img in doc['data'][field]:
                 # check that the data is 2D, if not ignore it
