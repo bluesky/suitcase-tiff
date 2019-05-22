@@ -276,6 +276,9 @@ class Serializer(event_model.DocumentRouter):
                     tw = self._tiff_writers[streamname][field]
                     tw.save(img_asarray, *self._kwargs)
 
+    def stop(self, doc):
+        self.close()
+
     def close(self):
         '''Close all of the files opened by this Serializer.
         '''
