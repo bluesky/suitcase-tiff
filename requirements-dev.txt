@@ -7,7 +7,7 @@ flake8
 git+git://github.com/NSLS-II/ophyd@ophyd-for-suitcase-utils
 pytest >=3.9
 sphinx
-suitcase-utils[test_fixtures] >=0.1.0rc2
+suitcase-utils[test_fixtures] >=0.1.4rc1
 # These are dependencies of various sphinx extensions for documentation.
 ipython
 matplotlib

@@ -10,7 +10,7 @@ __version__ = get_versions()['version']
 del get_versions
 
 
-def export(gen, directory, file_prefix='{uid}-', astype='uint16',
+def export(gen, directory, file_prefix='{start[uid]}-', astype='uint16',
            bigtiff=False, byteorder=None, imagej=False, **kwargs):
     """
     Export a stream of documents to TIFF stack(s).
@@ -49,9 +49,10 @@ def export(gen, directory, file_prefix='{uid}-', astype='uint16',
 
     file_prefix : str, optional
         The first part of the filename of the generated output files. This
-        string may include templates as in ``{proposal_id}-{sample_name}-``,
+        string may include templates as in
+        ``{start[proposal_id]}-{start[sample_name]}-``,
         which are populated from the RunStart document. The default value is
-        ``{uid}-`` which is guaranteed to be present and unique. A more
+        ``{start[uid]}-`` which is guaranteed to be present and unique. A more
         descriptive value depends on the application and is therefore left to
         the user.
 
@@ -88,11 +89,11 @@ def export(gen, directory, file_prefix='{uid}-', astype='uint16',
 
     Generate files with more readable metadata in the file names.
 
-    >>> export(gen, '', '{plan_name}-{motors}-')
+    >>> export(gen, '', '{start[plan_name]}-{start[motors]}-')
 
     Include the experiment's start time formatted as YY-MM-DD_HH-MM.
 
-    >>> export(gen, '', '{time:%Y-%m-%d_%H:%M}-')
+    >>> export(gen, '', '{start[time]:%Y-%m-%d_%H:%M}-')
 
     Place the files in a different directory, such as on a mounted USB stick.
 
@@ -146,9 +147,10 @@ class Serializer(event_model.DocumentRouter):
 
     file_prefix : str, optional
         The first part of the filename of the generated output files. This
-        string may include templates as in ``{proposal_id}-{sample_name}-``,
+        string may include templates as in
+        ``{start[proposal_id]}-{start[sample_name]}-``,
         which are populated from the RunStart document. The default value is
-        ``{uid}-`` which is guaranteed to be present and unique. A more
+        ``{start[uid]}-`` which is guaranteed to be present and unique. A more
         descriptive value depends on the application and is therefore left to
         the user.
 
@@ -172,7 +174,7 @@ class Serializer(event_model.DocumentRouter):
         kwargs to be passed to ``tifffile.TiffWriter.save``.
     """
 
-    def __init__(self, directory, file_prefix='{uid}-', astype='uint16',
+    def __init__(self, directory, file_prefix='{start[uid]}-', astype='uint16',
                  bigtiff=False, byteorder=None, imagej=False, **kwargs):
 
         if isinstance(directory, (str, Path)):
@@ -258,11 +260,13 @@ class Serializer(event_model.DocumentRouter):
         '''
         event_model.verify_filled(doc)
         streamname = self._descriptors[doc['descriptor']].get('name')
-        self._templated_file_prefix = self._file_prefix.format(**self._start)
+        self._templated_file_prefix = self._file_prefix.format(
+            start=self._start)
         for field in doc['data']:
             for img in doc['data'][field]:
                 # check that the data is 2D, if not ignore it
-                img_asarray = numpy.asarray(img, dtype=numpy.dtype(self._astype))
+                img_asarray = numpy.asarray(img,
+                                            dtype=numpy.dtype(self._astype))
                 if img_asarray.ndim == 2:
                     # create a file for this stream and field if required
                     if not self._tiff_writers.get(streamname, {}).get(field):
