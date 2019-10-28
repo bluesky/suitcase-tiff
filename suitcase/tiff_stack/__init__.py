@@ -264,14 +264,11 @@ class Serializer(event_model.DocumentRouter):
             start=self._start)
         for field in doc['data']:
             for img in doc['data'][field]:
-                print(f'field: {field}')
                 # check that the data is 2D, if not ignore it
                 img_asarray = numpy.asarray(img,
                                             dtype=numpy.dtype(self._astype))
                 if img_asarray.ndim == 3:
-                    print(f'shape (before): {img_asarray.shape}')
                     img_asarray = numpy.sum(img_asarray, axis=0)
-                    print(f'shape (after): {img_asarray.shape}')
 
                 if img_asarray.ndim == 2:
                     # create a file for this stream and field if required
