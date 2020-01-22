@@ -4,6 +4,7 @@ import itertools
 import numpy
 from suitcase import tiff_stack
 from tifffile import TiffWriter
+import warnings
 from ._version import get_versions
 
 __version__ = get_versions()['version']
@@ -234,20 +235,25 @@ class Serializer(tiff_stack.Serializer):
         stream_name = descriptor.get('name')
         for field in doc['data']:
             img = doc['data'][field]
-            # check that the data is 2D, if not ignore it
-            img_asarray = numpy.asarray(img, dtype=self._astype)
-            if img_asarray.ndim == 2:
-                # template the file name.
-                num = next(self._counter[stream_name][field])
-                filename = get_prefixed_filename(
-                    file_prefix=self._file_prefix,
-                    start_doc=self._start,
-                    descriptor_doc=descriptor,
-                    event_doc=doc,
-                    num=num,
-                    stream_name=stream_name,
-                    field=field
-                )
+            # Check that the data is 2D or 3D; if not ignore it.
+            data_key = descriptor['data_keys'][field]
+            ndim = len(data_key['shape'] or [])
+            if data_key['dtype'] == 'array' and 1 < ndim < 4:
+                img_asarray = numpy.asarray(img, dtype=self._astype)
+                if ndim == 3:
+                    # Reduce to 2D using mean.
+                    img_asarray = np.mean(img_asarray, 0)
+                    num = next(self._counter[stream_name][field])
+                    filename = get_prefixed_filename(
+                        file_prefix=self._file_prefix,
+                        start_doc=self._start,
+                        descriptor_doc=descriptor,
+                        event_doc=doc,
+                        num=num,
+                        stream_name=stream_name,
+                        field=field
+                    )
+
                 file = self._manager.open('stream_data', filename, 'xb')
                 tw = TiffWriter(file, **self._init_kwargs)
                 self._tiff_writers[stream_name][field+f'-{num}'] = tw

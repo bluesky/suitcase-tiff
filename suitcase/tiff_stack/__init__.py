@@ -264,14 +264,20 @@ class Serializer(event_model.DocumentRouter):
             EventPage document
         '''
         event_model.verify_filled(doc)
+        descriptor = self._descriptors[doc['descriptor']]
         for field in doc['data']:
             for img in doc['data'][field]:
-                # check that the data is 2D, if not ignore it
-                img_asarray = numpy.asarray(
-                    img, dtype=numpy.dtype(self._astype))
-                if img_asarray.ndim == 2:
+                # Check that the data is 2D or 3D; if not ignore it.
+                data_key = descriptor['data_keys'][field]
+                ndim = len(data_key['shape'] or [])
+                if data_key['dtype'] == 'array' and 1 < ndim < 4:
+                    img_asarray = numpy.asarray(img, dtype=self._astype)
+                    if ndim == 3:
+                        # Reduce to 2D using mean.
+                        img_asarray = np.mean(img_asarray, 0)
+
                     # create a file for this stream and field if required
-                    stream_name = self._descriptors[doc['descriptor']].get('name')
+                    stream_name = descriptor.get('name')
                     if not self._tiff_writers.get(stream_name, {}).get(field):
                         filename = get_prefixed_filename(
                             file_prefix=self._file_prefix,
