@@ -1,8 +1,12 @@
-from .. import export
-from suitcase.tiff_series.tests.tests import create_expected
-from numpy.testing import assert_array_equal
 import os
+from pathlib import Path
 import tifffile
+
+from numpy.testing import assert_array_equal
+
+from event_model import DocumentRouter
+from .. import export, Serializer
+from suitcase.tiff_series.tests.tests import create_expected
 
 
 def test_export(tmp_path, example_data):
@@ -50,3 +54,53 @@ def test_file_prefix_formatting(file_prefix_list, example_data, tmp_path):
         unique_actual = set(str(artifact).split('/')[-1].partition('-')[0]
                             for artifact in artifacts['stream_data'])
         assert unique_actual == set([templated_file_prefix])
+
+
+def test_file_prefix_streamname_field_formatting(example_data, tmp_path):
+    '''
+    Runs a test of ``file_prefix`` formatting including ``field``
+    and ``streamname``.
+
+    ..note::
+
+        Due to the `example_data` `pytest.fixture this will run multiple tests
+        each with a range of detectors and event_types. See `suitcase.utils.conftest`
+        for more info.
+
+    '''
+    collector = example_data()
+    file_prefix = "test-{streamname}-{field}/{start[uid]}-"
+    artifacts = export(collector, tmp_path, file_prefix=file_prefix)
+
+    class ExpectedFilePathCollector(DocumentRouter):
+        def __init__(self):
+            self._start_doc = None
+            self._descriptors = dict()
+            self.expected_file_paths = set()
+
+        def start(self, doc):
+            self._start_doc = doc
+
+        def descriptor(self, doc):
+            self._descriptors[doc['uid']] = doc
+
+        def event_page(self, doc):
+            for field in doc['data']:
+                filename = Path(
+                    Serializer._get_prefixed_filename(
+                        file_prefix=file_prefix,
+                        start_doc=self._start_doc,
+                        field=field,
+                        streamname=self._descriptors[doc['descriptor']]['name']
+                    )
+                )
+
+                self.expected_file_paths.add(str(tmp_path / filename))
+
+    fp_collector = ExpectedFilePathCollector()
+    for name, doc_ in collector:
+        fp_collector(name, doc_)
+
+    if artifacts:
+        unique_actual = {str(artifact) for artifact in artifacts['stream_data']}
+        assert unique_actual == fp_collector.expected_file_paths
