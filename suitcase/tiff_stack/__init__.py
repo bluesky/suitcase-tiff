@@ -153,6 +153,9 @@ class Serializer(event_model.DocumentRouter):
         ``{start[uid]}-`` which is guaranteed to be present and unique. A more
         descriptive value depends on the application and is therefore left to
         the user.
+        Two additional template parameters ``{streamname}`` and ``{field}``
+        are supported. These will be replaced with stream name and detector
+        name, respectively.
 
     astype : numpy dtype
         The image array is converted to this type before being passed to
@@ -186,7 +189,6 @@ class Serializer(event_model.DocumentRouter):
         self._tiff_writers = defaultdict(dict)
 
         self._file_prefix = file_prefix
-        self._templated_file_prefix = ''
         self._astype = astype  # convert numpy array dtype before tifffile
         self._init_kwargs = {'bigtiff': bigtiff, 'byteorder': byteorder,
                              'imagej': imagej}  # passed to TiffWriter()
@@ -259,19 +261,21 @@ class Serializer(event_model.DocumentRouter):
             EventPage document
         '''
         event_model.verify_filled(doc)
-        streamname = self._descriptors[doc['descriptor']].get('name')
-        self._templated_file_prefix = self._file_prefix.format(
-            start=self._start)
         for field in doc['data']:
             for img in doc['data'][field]:
                 # check that the data is 2D, if not ignore it
-                img_asarray = numpy.asarray(img,
-                                            dtype=numpy.dtype(self._astype))
+                img_asarray = numpy.asarray(
+                    img, dtype=numpy.dtype(self._astype))
                 if img_asarray.ndim == 2:
                     # create a file for this stream and field if required
+                    streamname = self._descriptors[doc['descriptor']].get('name')
                     if not self._tiff_writers.get(streamname, {}).get(field):
-                        filename = (f'{self._templated_file_prefix}'
-                                    f'{streamname}-{field}.tiff')
+                        filename = self._get_prefixed_filename(
+                            file_prefix=self._file_prefix,
+                            start_doc=self._start,
+                            streamname=streamname,
+                            field=field
+                        )
                         file = self._manager.open(
                             'stream_data', filename, 'xb')
                         tw = TiffWriter(file, **self._init_kwargs)
@@ -279,6 +283,14 @@ class Serializer(event_model.DocumentRouter):
                     # append the image to the file
                     tw = self._tiff_writers[streamname][field]
                     tw.save(img_asarray, *self._kwargs)
+
+    @staticmethod
+    def _get_prefixed_filename(file_prefix, start_doc, streamname, field):
+        '''Assemble the prefixed filename.'''
+        templated_file_prefix = file_prefix.format(
+            start=start_doc, field=field, streamname=streamname)
+        filename = f'{templated_file_prefix}{streamname}-{field}.tiff'
+        return filename
 
     def stop(self, doc):
         self.close()
