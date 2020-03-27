@@ -5,7 +5,7 @@ import tifffile
 from numpy.testing import assert_array_equal
 
 from event_model import DocumentRouter
-from .. import export, Serializer
+from .. import export, get_prefixed_filename
 from suitcase.tiff_series.tests.tests import create_expected
 
 
@@ -26,8 +26,8 @@ def test_export(tmp_path, example_data):
 
     for filename in artifacts.get('stream_data', []):
         actual = tifffile.imread(str(filename))
-        streamname = os.path.basename(filename).split('-')[0]
-        assert_array_equal(actual, expected[streamname])
+        stream_name = os.path.basename(filename).split('-')[0]
+        assert_array_equal(actual, expected[stream_name])
 
 
 def test_file_prefix_formatting(file_prefix_list, example_data, tmp_path):
@@ -56,20 +56,20 @@ def test_file_prefix_formatting(file_prefix_list, example_data, tmp_path):
         assert unique_actual == set([templated_file_prefix])
 
 
-def test_file_prefix_streamname_field_formatting(example_data, tmp_path):
+def test_file_prefix_stream_name_field_formatting(example_data, tmp_path):
     '''
     Runs a test of ``file_prefix`` formatting including ``field``
-    and ``streamname``.
+    and ``stream_name``.
 
     ..note::
 
-        Due to the `example_data` `pytest.fixture this will run multiple tests
+        Due to the `example_data` `pytest.fixture` this will run multiple tests
         each with a range of detectors and event_types. See `suitcase.utils.conftest`
         for more info.
 
     '''
     collector = example_data()
-    file_prefix = "test-{streamname}-{field}/{start[uid]}-"
+    file_prefix = "test-{stream_name}-{field}/{start[uid]}-"
     artifacts = export(collector, tmp_path, file_prefix=file_prefix)
 
     class ExpectedFilePathCollector(DocumentRouter):
@@ -87,11 +87,11 @@ def test_file_prefix_streamname_field_formatting(example_data, tmp_path):
         def event_page(self, doc):
             for field in doc['data']:
                 filename = Path(
-                    Serializer._get_prefixed_filename(
+                    get_prefixed_filename(
                         file_prefix=file_prefix,
                         start_doc=self._start_doc,
                         field=field,
-                        streamname=self._descriptors[doc['descriptor']]['name']
+                        stream_name=self._descriptors[doc['descriptor']]['name']
                     )
                 )
 
