@@ -55,6 +55,9 @@ def export(gen, directory, file_prefix='{start[uid]}-', astype='uint16',
         ``{start[uid]}-`` which is guaranteed to be present and unique. A more
         descriptive value depends on the application and is therefore left to
         the user.
+        Two additional template parameters ``{stream_name}`` and ``{field}``
+        are supported. These will be replaced with stream name and detector
+        name, respectively.
 
     astype : numpy dtype
         The image array is converted to this type before being passed to
