@@ -156,7 +156,7 @@ class Serializer(event_model.DocumentRouter):
         ``{start[uid]}-`` which is guaranteed to be present and unique. A more
         descriptive value depends on the application and is therefore left to
         the user.
-        Two additional template parameters ``{streamname}`` and ``{field}``
+        Two additional template parameters ``{stream_name}`` and ``{field}``
         are supported. These will be replaced with stream name and detector
         name, respectively.
 
@@ -271,29 +271,21 @@ class Serializer(event_model.DocumentRouter):
                     img, dtype=numpy.dtype(self._astype))
                 if img_asarray.ndim == 2:
                     # create a file for this stream and field if required
-                    streamname = self._descriptors[doc['descriptor']].get('name')
-                    if not self._tiff_writers.get(streamname, {}).get(field):
-                        filename = self._get_prefixed_filename(
+                    stream_name = self._descriptors[doc['descriptor']].get('name')
+                    if not self._tiff_writers.get(stream_name, {}).get(field):
+                        filename = get_prefixed_filename(
                             file_prefix=self._file_prefix,
                             start_doc=self._start,
-                            streamname=streamname,
+                            stream_name=stream_name,
                             field=field
                         )
                         file = self._manager.open(
                             'stream_data', filename, 'xb')
                         tw = TiffWriter(file, **self._init_kwargs)
-                        self._tiff_writers[streamname][field] = tw
+                        self._tiff_writers[stream_name][field] = tw
                     # append the image to the file
-                    tw = self._tiff_writers[streamname][field]
+                    tw = self._tiff_writers[stream_name][field]
                     tw.save(img_asarray, *self._kwargs)
-
-    @staticmethod
-    def _get_prefixed_filename(file_prefix, start_doc, streamname, field):
-        '''Assemble the prefixed filename.'''
-        templated_file_prefix = file_prefix.format(
-            start=start_doc, field=field, streamname=streamname)
-        filename = f'{templated_file_prefix}{streamname}-{field}.tiff'
-        return filename
 
     def stop(self, doc):
         self.close()
@@ -314,3 +306,11 @@ class Serializer(event_model.DocumentRouter):
 
     def __exit__(self, *exception_details):
         self.close()
+
+
+def get_prefixed_filename(file_prefix, start_doc, stream_name, field):
+    '''Assemble the prefixed filename.'''
+    templated_file_prefix = file_prefix.format(
+        start=start_doc, field=field, stream_name=stream_name)
+    filename = f'{templated_file_prefix}{stream_name}-{field}.tiff'
+    return filename
