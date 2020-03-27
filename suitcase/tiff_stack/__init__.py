@@ -55,6 +55,9 @@ def export(gen, directory, file_prefix='{start[uid]}-', astype='uint16',
         ``{start[uid]}-`` which is guaranteed to be present and unique. A more
         descriptive value depends on the application and is therefore left to
         the user.
+        Two additional template parameters ``{stream_name}`` and ``{field}``
+        are supported. These will be replaced with stream name and detector
+        name, respectively.
 
     astype : numpy dtype
         The image array is converted to this type before being passed to
@@ -153,6 +156,9 @@ class Serializer(event_model.DocumentRouter):
         ``{start[uid]}-`` which is guaranteed to be present and unique. A more
         descriptive value depends on the application and is therefore left to
         the user.
+        Two additional template parameters ``{stream_name}`` and ``{field}``
+        are supported. These will be replaced with stream name and detector
+        name, respectively.
 
     astype : numpy dtype
         The image array is converted to this type before being passed to
@@ -186,7 +192,6 @@ class Serializer(event_model.DocumentRouter):
         self._tiff_writers = defaultdict(dict)
 
         self._file_prefix = file_prefix
-        self._templated_file_prefix = ''
         self._astype = astype  # convert numpy array dtype before tifffile
         self._init_kwargs = {'bigtiff': bigtiff, 'byteorder': byteorder,
                              'imagej': imagej}  # passed to TiffWriter()
@@ -248,7 +253,7 @@ class Serializer(event_model.DocumentRouter):
 
             The data in Events might be structured as an Event, an EventPage,
             or a "bulk event" (deprecated). The DocumentRouter base class takes
-            care of first transforming the other repsentations into an
+            care of first transforming the other representations into an
             EventPage and then routing them through here, so no further action
             is required in this class. We can assume we will always receive an
             EventPage.
@@ -259,25 +264,27 @@ class Serializer(event_model.DocumentRouter):
             EventPage document
         '''
         event_model.verify_filled(doc)
-        streamname = self._descriptors[doc['descriptor']].get('name')
-        self._templated_file_prefix = self._file_prefix.format(
-            start=self._start)
         for field in doc['data']:
             for img in doc['data'][field]:
                 # check that the data is 2D, if not ignore it
-                img_asarray = numpy.asarray(img,
-                                            dtype=numpy.dtype(self._astype))
+                img_asarray = numpy.asarray(
+                    img, dtype=numpy.dtype(self._astype))
                 if img_asarray.ndim == 2:
                     # create a file for this stream and field if required
-                    if not self._tiff_writers.get(streamname, {}).get(field):
-                        filename = (f'{self._templated_file_prefix}'
-                                    f'{streamname}-{field}.tiff')
+                    stream_name = self._descriptors[doc['descriptor']].get('name')
+                    if not self._tiff_writers.get(stream_name, {}).get(field):
+                        filename = get_prefixed_filename(
+                            file_prefix=self._file_prefix,
+                            start_doc=self._start,
+                            stream_name=stream_name,
+                            field=field
+                        )
                         file = self._manager.open(
                             'stream_data', filename, 'xb')
                         tw = TiffWriter(file, **self._init_kwargs)
-                        self._tiff_writers[streamname][field] = tw
+                        self._tiff_writers[stream_name][field] = tw
                     # append the image to the file
-                    tw = self._tiff_writers[streamname][field]
+                    tw = self._tiff_writers[stream_name][field]
                     tw.save(img_asarray, *self._kwargs)
 
     def stop(self, doc):
@@ -299,3 +306,11 @@ class Serializer(event_model.DocumentRouter):
 
     def __exit__(self, *exception_details):
         self.close()
+
+
+def get_prefixed_filename(file_prefix, start_doc, stream_name, field):
+    '''Assemble the prefixed filename.'''
+    templated_file_prefix = file_prefix.format(
+        start=start_doc, field=field, stream_name=stream_name)
+    filename = f'{templated_file_prefix}{stream_name}-{field}.tiff'
+    return filename

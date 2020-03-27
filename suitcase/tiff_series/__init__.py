@@ -62,6 +62,9 @@ def export(gen, directory, file_prefix='{start[uid]}-', astype='uint16',
         (event) documents. The default value is ``{start[uid]}-`` which is
         guaranteed to be present and unique. A more descriptive value depends
         on the application and is therefore left to the user.
+        Two additional template parameters ``{stream_name}`` and ``{field}``
+        are supported. These will be replaced with stream name and detector
+        name, respectively.
 
     bigtiff : boolean, optional
         Passed into ``tifffile.TiffWriter``. Default False.
@@ -157,6 +160,9 @@ class Serializer(tiff_stack.Serializer):
         (event) documents. The default value is ``{start[uid]}-`` which is
         guaranteed to be present and unique. A more descriptive value depends
         on the application and is therefore left to the user.
+        Two additional template parameters ``{stream_name}`` and ``{field}``
+        are supported. These will be replaced with stream name and detector
+        name, respectively.
 
     astype : numpy dtype
         The image array is converted to this type before being passed to
@@ -212,7 +218,7 @@ class Serializer(tiff_stack.Serializer):
 
             The data in Events might be structured as an Event, an EventPage,
             or a "bulk event" (deprecated). The DocumentRouter base class takes
-            care of first transforming the other repsentations into an
+            care of first transforming the other representations into an
             EventPage and then routing them through here, as we require Event
             documents _in this case_ we overwrite both the `event` method and
             the `event_page` method so we can assume we will always receive an
@@ -225,20 +231,45 @@ class Serializer(tiff_stack.Serializer):
         '''
         event_model.verify_filled(event_model.pack_event_page(*[doc]))
         descriptor = self._descriptors[doc['descriptor']]
-        streamname = descriptor.get('name')
+        stream_name = descriptor.get('name')
         for field in doc['data']:
             img = doc['data'][field]
             # check that the data is 2D, if not ignore it
             img_asarray = numpy.asarray(img, dtype=self._astype)
             if img_asarray.ndim == 2:
                 # template the file name.
-                self._templated_file_prefix = self._file_prefix.format(
-                    start=self._start, descriptor=descriptor,
-                    event=doc)
-                num = next(self._counter[streamname][field])
-                filename = (f'{self._templated_file_prefix}'
-                            f'{streamname}-{field}-{num}.tiff')
+                num = next(self._counter[stream_name][field])
+                filename = get_prefixed_filename(
+                    file_prefix=self._file_prefix,
+                    start_doc=self._start,
+                    descriptor_doc=descriptor,
+                    event_doc=doc,
+                    num=num,
+                    stream_name=stream_name,
+                    field=field
+                )
                 file = self._manager.open('stream_data', filename, 'xb')
                 tw = TiffWriter(file, **self._init_kwargs)
-                self._tiff_writers[streamname][field+f'-{num}'] = tw
+                self._tiff_writers[stream_name][field+f'-{num}'] = tw
                 tw.save(img_asarray, *self._kwargs)
+
+
+def get_prefixed_filename(
+        file_prefix,
+        start_doc,
+        descriptor_doc,
+        event_doc,
+        num,
+        stream_name,
+        field):
+    '''Assemble the prefixed filename.'''
+    templated_file_prefix = file_prefix.format(
+        start=start_doc,
+        descriptor=descriptor_doc,
+        event=event_doc,
+        stream_name=stream_name,
+        field=field
+    )
+    filename = (f'{templated_file_prefix}'
+                f'{stream_name}-{field}-{num}.tiff')
+    return filename
