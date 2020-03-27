@@ -51,7 +51,8 @@ def create_expected(collector, stack_images):
 
 @pytest.mark.parametrize("file_prefix", ['test-', 'scan_{start[uid]}-',
                                          'scan_{descriptor[uid]}-',
-                                         '{event[uid]}-'])
+                                         '{event[uid]}-',
+                                         '{stream_name}_{field}-'])
 def test_path_formatting(file_prefix, example_data, tmp_path):
     collector = example_data()
     artifacts = export(collector, tmp_path, file_prefix=file_prefix)
@@ -65,25 +66,31 @@ def test_path_formatting(file_prefix, example_data, tmp_path):
             elif name == 'descriptor':
                 descriptors[doc['uid']] = doc
             elif name == 'event_page':
+                stream_name = descriptors[doc['descriptor']]['name']
                 for event in event_model.unpack_event_page(doc):
-                    templated_file_prefix = file_prefix.format(
-                        start=start, descriptor=descriptors[doc['descriptor']],
-                        event=event)
-                    events_list.append(templated_file_prefix.partition('-')[0])
+                    for field in event['data']:
+                        templated_file_prefix = file_prefix.format(
+                            start=start, descriptor=descriptors[doc['descriptor']],
+                            event=event, stream_name=stream_name, field=field)
+                        events_list.append(templated_file_prefix.partition('-')[0])
             elif name == 'bulk_events':
                 for key, events in doc.items():
                     for event in events:
-                        templated_file_prefix = file_prefix.format(
-                            start=start,
-                            descriptor=descriptors[event['descriptor']],
-                            event=event)
-                        events_list.append(
-                            templated_file_prefix.partition('-')[0])
+                        for field in event['data']:
+                            stream_name = descriptors[event['descriptor']]['name']
+                            templated_file_prefix = file_prefix.format(
+                                start=start,
+                                descriptor=descriptors[event['descriptor']],
+                                event=event, stream_name=stream_name, field=field)
+                            events_list.append(
+                                templated_file_prefix.partition('-')[0])
             elif name == 'event':
-                templated_file_prefix = file_prefix.format(
-                    start=start, descriptor=descriptors[doc['descriptor']],
-                    event=doc)
-                events_list.append(templated_file_prefix.partition('-')[0])
+                stream_name = descriptors[doc['descriptor']]['name']
+                for field in doc['data']:
+                    templated_file_prefix = file_prefix.format(
+                        start=start, descriptor=descriptors[doc['descriptor']],
+                        event=doc, stream_name=stream_name, field=field)
+                    events_list.append(templated_file_prefix.partition('-')[0])
         return events_list
 
     events_list = _name_templator(collector, file_prefix)
