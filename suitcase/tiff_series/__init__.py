@@ -243,17 +243,16 @@ class Serializer(tiff_stack.Serializer):
                 if ndim == 3:
                     # Reduce to 2D using mean.
                     img_asarray = np.mean(img_asarray, 0)
-                    num = next(self._counter[stream_name][field])
-                    filename = get_prefixed_filename(
-                        file_prefix=self._file_prefix,
-                        start_doc=self._start,
-                        descriptor_doc=descriptor,
-                        event_doc=doc,
-                        num=num,
-                        stream_name=stream_name,
-                        field=field
-                    )
-
+                num = next(self._counter[stream_name][field])
+                filename = get_prefixed_filename(
+                    file_prefix=self._file_prefix,
+                    start_doc=self._start,
+                    descriptor_doc=descriptor,
+                    event_doc=doc,
+                    num=num,
+                    stream_name=stream_name,
+                    field=field
+                )
                 file = self._manager.open('stream_data', filename, 'xb')
                 tw = TiffWriter(file, **self._init_kwargs)
                 self._tiff_writers[stream_name][field+f'-{num}'] = tw
