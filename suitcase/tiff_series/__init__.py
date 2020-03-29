@@ -1,10 +1,12 @@
 from collections import defaultdict
-import event_model
 import itertools
+
 import numpy
-from suitcase import tiff_stack
 from tifffile import TiffWriter
-import warnings
+
+import event_model
+from suitcase import tiff_stack
+
 from ._version import get_versions
 
 __version__ = get_versions()['version']
