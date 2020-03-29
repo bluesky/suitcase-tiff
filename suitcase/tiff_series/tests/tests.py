@@ -9,12 +9,7 @@ import pytest
 import tifffile
 
 import event_model
-from .. import export
-import numpy
-from numpy.testing import assert_array_equal
-import os
-import pytest
-import tifffile
+from .. import export, get_prefixed_filename
 
 
 def create_expected(collector, stack_images):
@@ -67,48 +62,57 @@ def test_path_formatting(file_prefix, example_data, tmp_path):
     collector = example_data()
     artifacts = export(collector, tmp_path, file_prefix=file_prefix)
 
-    def _name_templator(collector, file_prefix):
-        events_list = []
-        descriptors = {}
-        for name, doc in collector:
-            if name == 'start':
-                start = doc
-            elif name == 'descriptor':
-                descriptors[doc['uid']] = doc
-            elif name == 'event_page':
-                stream_name = descriptors[doc['descriptor']]['name']
-                for event in event_model.unpack_event_page(doc):
-                    for field in event['data']:
-                        templated_file_prefix = file_prefix.format(
-                            start=start, descriptor=descriptors[doc['descriptor']],
-                            event=event, stream_name=stream_name, field=field)
-                        events_list.append(templated_file_prefix.partition('-')[0])
-            elif name == 'bulk_events':
-                for key, events in doc.items():
-                    for event in events:
-                        for field in event['data']:
-                            stream_name = descriptors[event['descriptor']]['name']
-                            templated_file_prefix = file_prefix.format(
-                                start=start,
-                                descriptor=descriptors[event['descriptor']],
-                                event=event, stream_name=stream_name, field=field)
-                            events_list.append(
-                                templated_file_prefix.partition('-')[0])
-            elif name == 'event':
-                stream_name = descriptors[doc['descriptor']]['name']
-                for field in doc['data']:
-                    templated_file_prefix = file_prefix.format(
-                        start=start, descriptor=descriptors[doc['descriptor']],
-                        event=doc, stream_name=stream_name, field=field)
-                    events_list.append(templated_file_prefix.partition('-')[0])
-        return events_list
+    class ExpectedFilePathCollector(event_model.DocumentRouter):
+        def __init__(self):
+            self._start_doc = None
+            self._descriptors = dict()
+            self.expected_file_paths = set()
+            self._counter = defaultdict(lambda: defaultdict(itertools.count))
 
-    events_list = _name_templator(collector, file_prefix)
+        def start(self, doc):
+            self._start_doc = doc
+
+        def descriptor(self, doc):
+            self._descriptors[doc['uid']] = doc
+
+        def bulk_events(self, doc):
+            for key, events in doc.items():
+                for event in events:
+                    self.get_filename_for_event(event_doc=event)
+
+        def event_page(self, doc):
+            for event in event_model.unpack_event_page(doc):
+                self.get_filename_for_event(event_doc=event)
+
+        def event(self, doc):
+            self.get_filename_for_event(doc)
+
+        def get_filename_for_event(self, event_doc):
+            descriptor = self._descriptors[event_doc['descriptor']]
+            stream_name = descriptor["name"]
+            for field in event_doc['data']:
+                data_key = descriptor['data_keys'][field]
+                ndim = len(data_key['shape'] or [])
+                if data_key["dtype"] == 'array' and 1 < ndim < 4:
+                    num = next(self._counter[stream_name][field])
+                    filename = get_prefixed_filename(
+                        file_prefix=file_prefix,
+                        start_doc=self._start_doc,
+                        descriptor_doc=descriptor,
+                        event_doc=event_doc,
+                        num=num,
+                        stream_name=stream_name,
+                        field=field
+                    )
+                    self.expected_file_paths.add(Path(tmp_path) / Path(filename))
+
+    fp_collector = ExpectedFilePathCollector()
+    for name, doc_ in collector:
+        fp_collector(name, doc_)
 
     if artifacts:
-        unique_actual = set(str(artifact).split('/')[-1].partition('-')[0]
-                            for artifact in artifacts['stream_data'])
-        assert unique_actual == set(events_list)
+        unique_actual = {Path(artifact) for artifact in artifacts['stream_data']}
+        assert unique_actual == fp_collector.expected_file_paths
 
 
 def test_export(tmp_path, example_data):
