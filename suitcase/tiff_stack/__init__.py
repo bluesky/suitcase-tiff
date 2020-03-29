@@ -1,9 +1,12 @@
 from collections import defaultdict
 from pathlib import Path
-from tifffile import TiffWriter
-import event_model
+
 import numpy
+from tifffile import TiffWriter
+
+import event_model
 import suitcase.utils
+
 from ._version import get_versions
 
 __version__ = get_versions()['version']
