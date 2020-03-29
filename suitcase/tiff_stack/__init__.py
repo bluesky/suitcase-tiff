@@ -268,6 +268,7 @@ class Serializer(event_model.DocumentRouter):
         '''
         event_model.verify_filled(doc)
         descriptor = self._descriptors[doc['descriptor']]
+        stream_name = descriptor.get('name')
         for field in doc['data']:
             for img in doc['data'][field]:
                 # Check that the data is 2D or 3D; if not ignore it.
@@ -275,26 +276,26 @@ class Serializer(event_model.DocumentRouter):
                 ndim = len(data_key['shape'] or [])
                 if data_key['dtype'] == 'array' and 1 < ndim < 4:
                     img_asarray = numpy.asarray(img, dtype=self._astype)
-                    if ndim == 3:
-                        # Reduce to 2D using mean.
-                        img_asarray = np.mean(img_asarray, 0)
-
-                    # create a file for this stream and field if required
-                    stream_name = descriptor.get('name')
-                    if not self._tiff_writers.get(stream_name, {}).get(field):
-                        filename = get_prefixed_filename(
-                            file_prefix=self._file_prefix,
-                            start_doc=self._start,
-                            stream_name=stream_name,
-                            field=field
-                        )
-                        file = self._manager.open(
-                            'stream_data', filename, 'xb')
-                        tw = TiffWriter(file, **self._init_kwargs)
-                        self._tiff_writers[stream_name][field] = tw
-                    # append the image to the file
-                    tw = self._tiff_writers[stream_name][field]
-                    tw.save(img_asarray, *self._kwargs)
+                    if ndim == 2:
+                        # handle 2D data just like 3D data
+                        # by adding a 3rd dimension
+                        img_asarray = numpy.expand_dims(img_asarray, axis=0)
+                    for i in range(img_asarray.shape[0]):
+                        img_asarray_2d = img_asarray[i, :]
+                        # create a file for this stream and field if required
+                        if not self._tiff_writers.get(stream_name, {}).get(field):
+                            filename = get_prefixed_filename(
+                                file_prefix=self._file_prefix,
+                                start_doc=self._start,
+                                stream_name=stream_name,
+                                field=field
+                            )
+                            file = self._manager.open('stream_data', filename, 'xb')
+                            tw = TiffWriter(file, **self._init_kwargs)
+                            self._tiff_writers[stream_name][field] = tw
+                        # append the image to the file
+                        tw = self._tiff_writers[stream_name][field]
+                        tw.save(img_asarray_2d, *self._kwargs)
 
     def stop(self, doc):
         self.close()
