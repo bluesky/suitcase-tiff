@@ -7,3 +7,11 @@ This is a suitcase subpackage for reading a particular file format.
 ```
 pip install suitcase-tiff
 ```
+
+## Quick Start
+
+TODO
+
+## Documentation
+
+See the [suitcase documentation](https://nsls-ii.github.io/suitcase).
