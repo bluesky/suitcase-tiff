@@ -10,7 +10,23 @@ pip install suitcase-tiff
 
 ## Quick Start
 
-TODO
+`suitcase-tiff` supports stack and series.
+
+Using stack:
+
+```
+import suitcase.tiff_stack
+docs = db[-1].documents(fill=True)
+suitcase.tiff_stack.export(docs, 'my_exported_files/', file_prefix='PREFIX-')
+```
+
+Using series:
+
+```
+import suitcase.tiff_series
+docs = db[-1].documents(fill=True)
+suitcase.tiff_series.export(docs, 'my_exported_files/', file_prefix='PREFIX-')
+```
 
 ## Documentation
 
