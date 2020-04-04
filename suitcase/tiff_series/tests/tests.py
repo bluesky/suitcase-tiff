@@ -3,13 +3,15 @@ import itertools
 import os
 from pathlib import Path
 
-import numpy
+import numpy as np
 from numpy.testing import assert_array_equal
 import pytest
 import tifffile
 
+from bluesky.plans import count
 import event_model
-from .. import export, get_prefixed_filename
+from ophyd.sim import DirectImage
+from .. import export, get_prefixed_filename, Serializer
 
 
 def create_expected(collector, stack_images):
@@ -41,15 +43,15 @@ def create_expected(collector, stack_images):
         for stream_name, event_list in events_dict.items():
             expected_dict = {}
             if not stack_images:
-                expected_dict[stream_name] = numpy.ones((10, 10))
-                expected_dict['baseline'] = numpy.ones((10, 10))
+                expected_dict[stream_name] = np.ones((10, 10))
+                expected_dict['baseline'] = np.ones((10, 10))
             elif len(event_list) == 1:
-                expected_dict[stream_name] = numpy.ones((10, 10))
-                expected_dict['baseline'] = numpy.ones((2, 10, 10))
+                expected_dict[stream_name] = np.ones((10, 10))
+                expected_dict['baseline'] = np.ones((2, 10, 10))
             else:
-                expected_dict[stream_name] = numpy.ones(
+                expected_dict[stream_name] = np.ones(
                     (len(event_list), 10, 10))
-                expected_dict['baseline'] = numpy.ones((3, 10, 10))
+                expected_dict['baseline'] = np.ones((3, 10, 10))
 
     return expected_dict
 
@@ -134,3 +136,35 @@ def test_export(tmp_path, example_data):
         actual = tifffile.imread(str(filename))
         streamname = os.path.basename(filename).split('-')[0]
         assert_array_equal(actual, expected[streamname])
+
+
+def test_2d_data(RE, tmp_path):
+    """
+    Expect one file written for each detector trigger.
+    """
+    def return_2d_data():
+        return np.zeros((3, 3))
+
+    det = DirectImage(name="2d image", func=return_2d_data)
+
+    RE.subscribe(Serializer(directory=tmp_path))
+    RE(count([det], num=5))
+
+    file_list = os.listdir(path=tmp_path)
+    assert len(file_list) == 5
+
+
+def test_3d_data(RE, tmp_path):
+    """
+    Expect 3 files written for each detector trigger.
+    """
+    def return_3d_data():
+        return np.zeros((3, 3, 3))
+
+    det = DirectImage(name="3d image", func=return_3d_data)
+
+    RE.subscribe(Serializer(directory=tmp_path))
+    RE(count([det], num=5))
+
+    file_list = os.listdir(path=tmp_path)
+    assert len(file_list) == 15
