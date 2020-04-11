@@ -2,6 +2,7 @@ from collections import defaultdict
 import itertools
 import os
 from pathlib import Path
+import re
 
 import numpy as np
 from numpy.testing import assert_array_equal
@@ -138,6 +139,25 @@ def test_export(tmp_path, example_data):
         assert_array_equal(actual, expected[streamname])
 
 
+def test_1d_data(RE, tmp_path):
+    """
+    Expect 0 file written.
+    """
+    def return_1d_data():
+        return np.zeros((3,))
+
+    det = DirectImage(name="1d_image", func=return_1d_data)
+
+    tiff_serializer = Serializer(directory=tmp_path)
+    RE.subscribe(tiff_serializer)
+    RE(count([det], num=5))
+
+    assert "stream_data" not in tiff_serializer.artifacts
+
+    filenames = os.listdir(path=tmp_path)
+    assert len(filenames) == 0
+
+
 def test_2d_data(RE, tmp_path):
     """
     Expect one file written for each detector trigger.
@@ -145,13 +165,17 @@ def test_2d_data(RE, tmp_path):
     def return_2d_data():
         return np.zeros((3, 3))
 
-    det = DirectImage(name="2d image", func=return_2d_data)
+    det = DirectImage(name="2d_image", func=return_2d_data)
 
-    RE.subscribe(Serializer(directory=tmp_path))
+    tiff_serializer = Serializer(directory=tmp_path)
+    RE.subscribe(tiff_serializer)
     RE(count([det], num=5))
 
-    file_list = os.listdir(path=tmp_path)
-    assert len(file_list) == 5
+    assert len(tiff_serializer.artifacts["stream_data"]) == 5
+
+    filenames = os.listdir(path=tmp_path)
+    assert len(filenames) == 5
+    assert all([re.search(r"-\d+\.tiff$", filename) for filename in filenames])
 
 
 def test_3d_data(RE, tmp_path):
@@ -161,10 +185,33 @@ def test_3d_data(RE, tmp_path):
     def return_3d_data():
         return np.zeros((3, 3, 3))
 
-    det = DirectImage(name="3d image", func=return_3d_data)
+    det = DirectImage(name="3d_image", func=return_3d_data)
 
-    RE.subscribe(Serializer(directory=tmp_path))
+    tiff_serializer = Serializer(directory=tmp_path)
+    RE.subscribe(tiff_serializer)
     RE(count([det], num=5))
 
-    file_list = os.listdir(path=tmp_path)
-    assert len(file_list) == 15
+    assert len(tiff_serializer.artifacts["stream_data"]) == 15
+
+    filenames = os.listdir(path=tmp_path)
+    assert len(filenames) == 15
+    assert all([re.search(r"-\d+\.tiff$", filename) for filename in filenames])
+
+
+def test_4d_data(RE, tmp_path):
+    """
+    Expect 0 files written.
+    """
+    def return_4d_data():
+        return np.zeros((3, 3, 3, 3))
+
+    det = DirectImage(name="4d_image", func=return_4d_data)
+
+    tiff_serializer = Serializer(directory=tmp_path)
+    RE.subscribe(tiff_serializer)
+    RE(count([det], num=5))
+
+    assert "stream_data" not in tiff_serializer.artifacts
+
+    filenames = os.listdir(path=tmp_path)
+    assert len(filenames) == 0
