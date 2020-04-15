@@ -85,17 +85,21 @@ def test_file_prefix_stream_name_field_formatting(example_data, tmp_path):
             self._descriptors[doc['uid']] = doc
 
         def event_page(self, doc):
+            descriptor = self._descriptors[doc['descriptor']]
             for field in doc['data']:
-                filename = Path(
-                    get_prefixed_filename(
-                        file_prefix=file_prefix,
-                        start_doc=self._start_doc,
-                        field=field,
-                        stream_name=self._descriptors[doc['descriptor']]['name']
+                data_key = descriptor['data_keys'][field]
+                ndim = len(data_key['shape'] or [])
+                if data_key['dtype'] == 'array' and 1 < ndim < 4:
+                    filename = Path(
+                        get_prefixed_filename(
+                            file_prefix=file_prefix,
+                            start_doc=self._start_doc,
+                            field=field,
+                            stream_name=descriptor['name']
+                        )
                     )
-                )
 
-                self.expected_file_paths.add(str(tmp_path / filename))
+                    self.expected_file_paths.add(str(tmp_path / filename))
 
     fp_collector = ExpectedFilePathCollector()
     for name, doc_ in collector:

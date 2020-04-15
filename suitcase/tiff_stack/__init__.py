@@ -1,9 +1,12 @@
 from collections import defaultdict
 from pathlib import Path
-from tifffile import TiffWriter
-import event_model
+
 import numpy
+from tifffile import TiffWriter
+
+import event_model
 import suitcase.utils
+
 from ._version import get_versions
 
 __version__ = get_versions()['version']
@@ -264,14 +267,17 @@ class Serializer(event_model.DocumentRouter):
             EventPage document
         '''
         event_model.verify_filled(doc)
+        descriptor = self._descriptors[doc['descriptor']]
+        stream_name = descriptor.get('name')
         for field in doc['data']:
             for img in doc['data'][field]:
-                # check that the data is 2D, if not ignore it
-                img_asarray = numpy.asarray(
-                    img, dtype=numpy.dtype(self._astype))
-                if img_asarray.ndim == 2:
-                    # create a file for this stream and field if required
-                    stream_name = self._descriptors[doc['descriptor']].get('name')
+                # Check that the data is 2D or 3D; if not ignore it.
+                data_key = descriptor['data_keys'][field]
+                ndim = len(data_key['shape'] or [])
+                if data_key['dtype'] == 'array' and 1 < ndim < 4:
+                    # there is data to be written so
+                    # create a file for this stream and field
+                    # if one does not exist yet
                     if not self._tiff_writers.get(stream_name, {}).get(field):
                         filename = get_prefixed_filename(
                             file_prefix=self._file_prefix,
@@ -279,13 +285,21 @@ class Serializer(event_model.DocumentRouter):
                             stream_name=stream_name,
                             field=field
                         )
-                        file = self._manager.open(
-                            'stream_data', filename, 'xb')
+                        file = self._manager.open('stream_data', filename, 'xb')
                         tw = TiffWriter(file, **self._init_kwargs)
                         self._tiff_writers[stream_name][field] = tw
-                    # append the image to the file
-                    tw = self._tiff_writers[stream_name][field]
-                    tw.save(img_asarray, *self._kwargs)
+
+                    # write the data
+                    img_asarray = numpy.asarray(img, dtype=self._astype)
+                    if ndim == 2:
+                        # handle 2D data just like 3D data
+                        # by adding a 3rd dimension
+                        img_asarray = numpy.expand_dims(img_asarray, axis=0)
+                    for i in range(img_asarray.shape[0]):
+                        img_asarray_2d = img_asarray[i, :]
+                        # append the image to the file
+                        tw = self._tiff_writers[stream_name][field]
+                        tw.save(img_asarray_2d, *self._kwargs)
 
     def stop(self, doc):
         self.close()
