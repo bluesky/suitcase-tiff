@@ -23,7 +23,7 @@ suitcase.tiff_stack.export(docs, 'my_exported_files/')
 The exported file will have path:
 `my_exported_files/c416e70a-eb99-4964-bfc0-64e291313cce-primary-spot_img.tiff`
 
-Using series:
+### Using series:
 
 ```
 import suitcase.tiff_series
