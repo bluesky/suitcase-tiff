@@ -23,7 +23,7 @@ suitcase.tiff_stack.export(docs, 'my_exported_files/')
 The exported file will be saved as
 `my_exported_files/c416e70a-eb99-4964-bfc0-64e291313cce-primary-spot_img.tiff`
 
-### Using series:
+### Using a series of tiff images (one frame per file)
 
 ```
 import suitcase.tiff_series
