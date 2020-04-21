@@ -12,7 +12,7 @@ pip install suitcase-tiff
 
 `suitcase-tiff` supports stack and series methods.
 
-Using stack:
+### Using stack:
 
 ```
 import suitcase.tiff_stack
