@@ -45,4 +45,4 @@ argument. See the documentation link below.
 
 ## Documentation
 
-See the [suitcase documentation](https://blueskyproject.io/suitcase/).
+See the [suitcase documentation](https://blueskyproject.io/suitcase).
