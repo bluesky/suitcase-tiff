@@ -37,7 +37,6 @@ my_exported_files/c416e70a-eb99-4964-bfc0-64e291313cce-primary-spot_img-1.tiff
 my_exported_files/c416e70a-eb99-4964-bfc0-64e291313cce-primary-spot_img-2.tiff
 my_exported_files/c416e70a-eb99-4964-bfc0-64e291313cce-primary-spot_img-3.tiff
 ...
-
 ```
 
 The file prefix `c416e70a-eb99-4964-bfc0-64e291313cce` is the unique ID of the
