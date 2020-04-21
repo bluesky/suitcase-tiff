@@ -30,7 +30,7 @@ import suitcase.tiff_series
 docs = db[-1].documents(fill=True)
 suitcase.tiff_series.export(docs, 'my_exported_files/')
 ```
-Instead of one file, the exportor create seperate file per row:
+Instead of one file, the exporter creates a separate file per row:
 ```
 my_exported_files/c416e70a-eb99-4964-bfc0-64e291313cce-primary-spot_img-0.tiff
 my_exported_files/c416e70a-eb99-4964-bfc0-64e291313cce-primary-spot_img-1.tiff
