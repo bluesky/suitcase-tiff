@@ -185,16 +185,23 @@ class Serializer(tiff_stack.Serializer):
     imagej: boolean, optional
         Passed into ``tifffile.TiffWriter``. Default False.
 
+    event_num_pad : int, optional
+        The number of 0s to left-pad the event number to in the filename.
+
     **kwargs : kwargs
         kwargs to be passed to ``tifffile.TiffWriter.write``.
     """
-    def __init__(self, directory, file_prefix='{start[uid]}-', astype='uint16',
-                 bigtiff=False, byteorder=None, imagej=False, **kwargs):
+    def __init__(
+            self, directory, file_prefix='{start[uid]}-', astype='uint16',
+            bigtiff=False, byteorder=None, imagej=False, *,
+            event_num_pad=5, **kwargs
+    ):
         super().__init__(directory, file_prefix=file_prefix, astype=astype,
                          bigtiff=bigtiff, byteorder=byteorder, imagej=imagej,
                          **kwargs)
         # maps stream name to dict that map field name to index (#)
         self._counter = defaultdict(lambda: defaultdict(itertools.count))
+        self._event_num_pad = event_num_pad
 
     def event_page(self, doc):
         '''Converts an 'event_page' doc to 'event' docs for processing.
@@ -266,7 +273,8 @@ class Serializer(tiff_stack.Serializer):
                         event_doc=doc,
                         num=num,
                         stream_name=stream_name,
-                        field=field
+                        field=field,
+                        pad=self._event_num_pad
                     )
                     fname = self._manager.reserve_name('stream_data', filename)
                     Path(fname).parent.mkdir(parents=True, exist_ok=True)
@@ -282,7 +290,8 @@ def get_prefixed_filename(
         event_doc,
         num,
         stream_name,
-        field):
+        field,
+        pad):
     '''Assemble the prefixed filename.'''
     templated_file_prefix = file_prefix.format(
         start=start_doc,
@@ -291,6 +300,7 @@ def get_prefixed_filename(
         stream_name=stream_name,
         field=field
     )
+    frame_number = f"{{num:0{pad}d}}".format(num=num)
     filename = (f'{templated_file_prefix}'
-                f'{stream_name}-{field}-{num}.tiff')
+                f'{stream_name}-{field}-{frame_number}.tiff')
     return filename
