@@ -1,5 +1,6 @@
 from collections import defaultdict
 import itertools
+import warnings
 
 import numpy
 from tifffile import TiffWriter
@@ -242,6 +243,14 @@ class Serializer(tiff_stack.Serializer):
             ndim = len(data_key['shape'] or [])
             if data_key['dtype'] == 'array' and 1 < ndim < 4:
                 img_asarray = numpy.asarray(img, dtype=self._astype)
+                if tuple(data_key['shape']) != img_asarray.shape:
+                    warnings.warn(
+                        f"The descriptor claims the data shape is {data_key['shape']} "
+                        f"but the data is actual data shape is {img_asarray.shape}! "
+                        f"This will be an error in the future."
+                    )
+                    ndim = img_asarray.ndim
+
                 if ndim == 2:
                     # handle 2D data just like 3D data
                     # by adding a 3rd dimension
