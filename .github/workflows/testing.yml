@@ -1,0 +1,49 @@
+name: testing
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: Run pytest tests for the repo
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.8", "3.9"]
+      fail-fast: false
+    env:
+      TZ: America/New_York
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+      - name: Set env vars
+        run: |
+          export REPOSITORY_NAME=${GITHUB_REPOSITORY#*/}  # just the repo, as opposed to org/repo
+          echo "REPOSITORY_NAME=${REPOSITORY_NAME}" >> $GITHUB_ENV
+
+      - name: checkout the code
+        uses: actions/checkout@v2
+
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: ${{ env.REPOSITORY_NAME }}
+          auto-update-conda: true
+          miniconda-version: "latest"
+          python-version: ${{ matrix.python-version }}
+
+      - name: pip-install the package and its dependencies
+        run: |
+          # For reference: https://www.gnu.org/software/bash/manual/html_node/The-Set-Builtin.html.
+          set -vxeuo pipefail
+          # Install this package and the packages listed in requirements.txt.
+          python3 -m pip install .
+          # Install extra requirements for running tests and building docs.
+          python3 -m pip install -r requirements-dev.txt
+
+      - name: run tests
+        run: |
+          set -vxeuo pipefail
+          pytest -vv -s
