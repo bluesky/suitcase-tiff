@@ -300,7 +300,6 @@ def get_prefixed_filename(
         stream_name=stream_name,
         field=field
     )
-    frame_number = f"{{num:0{pad}d}}".format(num=num)
     filename = (f'{templated_file_prefix}'
-                f'{stream_name}-{field}-{frame_number}.tiff')
+                f'{stream_name}-{field}-{num:0{pad}d}.tiff')
     return filename
