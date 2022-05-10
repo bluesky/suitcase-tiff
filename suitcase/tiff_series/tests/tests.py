@@ -105,7 +105,8 @@ def test_path_formatting(file_prefix, example_data, tmp_path):
                         event_doc=event_doc,
                         num=num,
                         stream_name=stream_name,
-                        field=field
+                        field=field,
+                        pad=5,
                     )
                     self.expected_file_paths.add(Path(tmp_path) / Path(filename))
 
