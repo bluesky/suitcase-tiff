@@ -1,5 +1,6 @@
 from collections import defaultdict
 import itertools
+from pathlib import Path
 import warnings
 
 import numpy
@@ -80,7 +81,7 @@ def export(gen, directory, file_prefix='{start[uid]}-', astype='uint16',
         Passed into ``tifffile.TiffWriter``. Default False.
 
     **kwargs : kwargs
-        kwargs to be passed to ``tifffile.TiffWriter.save``.
+        kwargs to be passed to ``tifffile.TiffWriter.write``.
 
     Returns
     -------
@@ -185,7 +186,7 @@ class Serializer(tiff_stack.Serializer):
         Passed into ``tifffile.TiffWriter``. Default False.
 
     **kwargs : kwargs
-        kwargs to be passed to ``tifffile.TiffWriter.save``.
+        kwargs to be passed to ``tifffile.TiffWriter.write``.
     """
     def __init__(self, directory, file_prefix='{start[uid]}-', astype='uint16',
                  bigtiff=False, byteorder=None, imagej=False, **kwargs):
@@ -267,10 +268,11 @@ class Serializer(tiff_stack.Serializer):
                         stream_name=stream_name,
                         field=field
                     )
-                    file = self._manager.open('stream_data', filename, 'xb')
-                    tw = TiffWriter(file, **self._init_kwargs)
+                    fname = self._manager.reserve_name('stream_data', filename)
+                    Path(fname).parent.mkdir(parents=True, exist_ok=True)
+                    tw = TiffWriter(fname, **self._init_kwargs)
                     self._tiff_writers[stream_name][field+f'-{num}'] = tw
-                    tw.save(img_asarray_2d, *self._kwargs)
+                    tw.write(img_asarray_2d, *self._kwargs)
 
 
 def get_prefixed_filename(
