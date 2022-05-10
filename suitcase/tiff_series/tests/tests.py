@@ -215,3 +215,32 @@ def test_4d_data(RE, tmp_path):
 
     filenames = os.listdir(path=tmp_path)
     assert len(filenames) == 0
+
+
+def test_2d_data_lies(RE, tmp_path):
+    """
+    Expect one file written for each detector trigger.
+    """
+
+    def return_2d_data():
+        return np.zeros((3, 3))
+
+    class LyingDirectImage(DirectImage):
+        def describe(self):
+            ret = super().describe()
+            k = f"{self.name}_img"
+            ret[k]["shape"] = [1] + ret[k]["shape"]
+            return ret
+
+    det = LyingDirectImage(name="2d_image", func=return_2d_data)
+
+    tiff_serializer = Serializer(directory=tmp_path)
+    RE.subscribe(tiff_serializer)
+    with pytest.warns(match="The descriptor claims the data shape is"):
+        RE(count([det], num=5))
+
+    assert len(tiff_serializer.artifacts["stream_data"]) == 5
+
+    filenames = os.listdir(path=tmp_path)
+    assert len(filenames) == 5
+    assert all([re.search(r"-\d+\.tiff$", filename) for filename in filenames])

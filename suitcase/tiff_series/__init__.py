@@ -1,5 +1,7 @@
 from collections import defaultdict
 import itertools
+from pathlib import Path
+import warnings
 
 import numpy
 from tifffile import TiffWriter
@@ -79,7 +81,7 @@ def export(gen, directory, file_prefix='{start[uid]}-', astype='uint16',
         Passed into ``tifffile.TiffWriter``. Default False.
 
     **kwargs : kwargs
-        kwargs to be passed to ``tifffile.TiffWriter.save``.
+        kwargs to be passed to ``tifffile.TiffWriter.write``.
 
     Returns
     -------
@@ -184,7 +186,7 @@ class Serializer(tiff_stack.Serializer):
         Passed into ``tifffile.TiffWriter``. Default False.
 
     **kwargs : kwargs
-        kwargs to be passed to ``tifffile.TiffWriter.save``.
+        kwargs to be passed to ``tifffile.TiffWriter.write``.
     """
     def __init__(self, directory, file_prefix='{start[uid]}-', astype='uint16',
                  bigtiff=False, byteorder=None, imagej=False, **kwargs):
@@ -242,6 +244,14 @@ class Serializer(tiff_stack.Serializer):
             ndim = len(data_key['shape'] or [])
             if data_key['dtype'] == 'array' and 1 < ndim < 4:
                 img_asarray = numpy.asarray(img, dtype=self._astype)
+                if tuple(data_key['shape']) != img_asarray.shape:
+                    warnings.warn(
+                        f"The descriptor claims the data shape is {data_key['shape']} "
+                        f"but the data is actual data shape is {img_asarray.shape}! "
+                        f"This will be an error in the future."
+                    )
+                    ndim = img_asarray.ndim
+
                 if ndim == 2:
                     # handle 2D data just like 3D data
                     # by adding a 3rd dimension
@@ -258,10 +268,11 @@ class Serializer(tiff_stack.Serializer):
                         stream_name=stream_name,
                         field=field
                     )
-                    file = self._manager.open('stream_data', filename, 'xb')
-                    tw = TiffWriter(file, **self._init_kwargs)
+                    fname = self._manager.reserve_name('stream_data', filename)
+                    Path(fname).parent.mkdir(parents=True, exist_ok=True)
+                    tw = TiffWriter(fname, **self._init_kwargs)
                     self._tiff_writers[stream_name][field+f'-{num}'] = tw
-                    tw.save(img_asarray_2d, *self._kwargs)
+                    tw.write(img_asarray_2d, *self._kwargs)
 
 
 def get_prefixed_filename(

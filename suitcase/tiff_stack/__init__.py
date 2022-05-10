@@ -79,7 +79,7 @@ def export(gen, directory, file_prefix='{start[uid]}-', astype='uint16',
         Passed into ``tifffile.TiffWriter``. Default False.
 
     **kwargs : kwargs
-        kwargs to be passed to ``tifffile.TiffWriter.save``.
+        kwargs to be passed to ``tifffile.TiffWriter.write``.
 
     Returns
     -------
@@ -180,7 +180,7 @@ class Serializer(event_model.DocumentRouter):
         Passed into ``tifffile.TiffWriter``. Default False.
 
     **kwargs : kwargs
-        kwargs to be passed to ``tifffile.TiffWriter.save``.
+        kwargs to be passed to ``tifffile.TiffWriter.write``.
     """
 
     def __init__(self, directory, file_prefix='{start[uid]}-', astype='uint16',
@@ -198,7 +198,7 @@ class Serializer(event_model.DocumentRouter):
         self._astype = astype  # convert numpy array dtype before tifffile
         self._init_kwargs = {'bigtiff': bigtiff, 'byteorder': byteorder,
                              'imagej': imagej}  # passed to TiffWriter()
-        self._kwargs = kwargs  # passed to TiffWriter.save()
+        self._kwargs = kwargs  # passed to TiffWriter.write()
         self._start = None  # holds the start document information
         self._descriptors = {}  # maps the descriptor uids to descriptor docs.
 
@@ -285,8 +285,9 @@ class Serializer(event_model.DocumentRouter):
                             stream_name=stream_name,
                             field=field
                         )
-                        file = self._manager.open('stream_data', filename, 'xb')
-                        tw = TiffWriter(file, **self._init_kwargs)
+                        fname = self._manager.reserve_name('stream_data', filename)
+                        Path(fname).parent.mkdir(parents=True, exist_ok=True)
+                        tw = TiffWriter(fname, **self._init_kwargs)
                         self._tiff_writers[stream_name][field] = tw
 
                     # write the data
@@ -299,7 +300,7 @@ class Serializer(event_model.DocumentRouter):
                         img_asarray_2d = img_asarray[i, :]
                         # append the image to the file
                         tw = self._tiff_writers[stream_name][field]
-                        tw.save(img_asarray_2d, *self._kwargs)
+                        tw.write(img_asarray_2d, contiguous=True, *self._kwargs)
 
     def stop(self, doc):
         self.close()
