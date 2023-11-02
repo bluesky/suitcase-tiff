@@ -280,7 +280,7 @@ class Serializer(tiff_stack.Serializer):
                     Path(fname).parent.mkdir(parents=True, exist_ok=True)
                     tw = TiffWriter(fname, **self._init_kwargs)
                     self._tiff_writers[stream_name][field+f'-{num}'] = tw
-                    tw.write(img_asarray_2d, *self._kwargs)
+                    tw.write(img_asarray_2d, **self._kwargs)
 
 
 def get_prefixed_filename(
