@@ -300,7 +300,7 @@ class Serializer(event_model.DocumentRouter):
                         img_asarray_2d = img_asarray[i, :]
                         # append the image to the file
                         tw = self._tiff_writers[stream_name][field]
-                        tw.write(img_asarray_2d, contiguous=True, *self._kwargs)
+                        tw.write(img_asarray_2d, contiguous=True, **self._kwargs)
 
     def stop(self, doc):
         self.close()
